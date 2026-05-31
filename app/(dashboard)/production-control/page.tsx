@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/dialog';
 import { BarChart3, Eye, Factory, Search, TimerReset, TriangleAlert } from 'lucide-react';
 import { getStatusBadgeVariant } from '@/lib/utils';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 type ProductionOrder = {
   id: string;
@@ -101,6 +102,8 @@ const EMPTY_PAYLOAD: ProductionPayload = {
 };
 
 export default function ProductionControlPage() {
+  const { can } = useAuth();
+  const canManageProduction = can('production.manage');
   const [data, setData] = useState<ProductionPayload>(EMPTY_PAYLOAD);
   const [isLive, setIsLive] = useState(false);
   const [search, setSearch] = useState('');
@@ -167,9 +170,14 @@ export default function ProductionControlPage() {
           <p className="text-sm text-muted-foreground">
             Integrasi data dari aplikasi Bradflow (`orders`).
           </p>
-          <Badge variant={isLive ? 'default' : 'secondary'}>
-            {isLive ? `Live: ${data.source}` : 'Belum tersambung'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={isLive ? 'default' : 'secondary'}>
+              {isLive ? `Live: ${data.source}` : 'Belum tersambung'}
+            </Badge>
+            <Badge variant={canManageProduction ? 'default' : 'secondary'}>
+              {canManageProduction ? 'Aksi Produksi Aktif' : 'Read Only'}
+            </Badge>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

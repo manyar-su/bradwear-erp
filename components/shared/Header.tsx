@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { Bell, Search, User, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,6 +16,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 interface HeaderProps {
   title: string;
@@ -21,6 +25,26 @@ interface HeaderProps {
 }
 
 export function Header({ title, breadcrumbs }: HeaderProps) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const initials = (() => {
+    if (!user?.displayName) return 'U';
+    const words = user.displayName.trim().split(/\s+/).slice(0, 2);
+    return words.map((word) => word.charAt(0).toUpperCase()).join('');
+  })();
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.replace('/login');
+    router.refresh();
+  };
+
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
       <div className="flex items-center justify-between px-6 py-4">
@@ -65,29 +89,49 @@ export function Header({ title, breadcrumbs }: HeaderProps) {
           </Button>
 
           {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">
-              <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  AD
-                </AvatarFallback>
-              </Avatar>
-              <span className="hidden lg:inline font-medium text-sm">Admin</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuLabel>Akun Saya</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="w-4 h-4 mr-2" />
-                Profil
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem data-variant="destructive">
-                <LogOut className="w-4 h-4 mr-2" />
-                Keluar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="hidden lg:flex flex-col items-start">
+                  <span className="font-medium text-sm leading-tight">{user.displayName}</span>
+                  <span className="text-[11px] text-muted-foreground leading-tight">{user.role}</span>
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[240px]">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{user.displayName}</span>
+                    <span className="text-xs text-muted-foreground">{user.email}</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <User className="w-4 h-4 mr-2" />
+                  Profil
+                  <Badge variant="secondary" className="ml-auto capitalize">
+                    {user.role}
+                  </Badge>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem data-variant="destructive" onClick={handleLogout}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  {isLoggingOut ? 'Memproses...' : 'Logout'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link
+              href={`/login?next=${encodeURIComponent(pathname || '/dashboard')}`}
+              className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:opacity-90"
+            >
+              Masuk
+            </Link>
+          )}
         </div>
       </div>
     </header>

@@ -33,8 +33,11 @@ import {
 import { formatRupiah, getStatusBadgeVariant } from '@/lib/utils';
 import { konsumenData, pesananData } from '@/lib/supabase/demo-data';
 import type { Konsumen, Pesanan } from '@/types/database';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 export default function KonsumenPage() {
+  const { can } = useAuth();
+  const canManageKonsumen = can('konsumen.manage');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedKonsumen, setSelectedKonsumen] = useState<Konsumen | null>(null);
@@ -138,11 +141,16 @@ export default function KonsumenPage() {
               </SelectContent>
             </Select>
           </div>
-          <Button className="gap-2">
+          <Button className="gap-2" disabled={!canManageKonsumen}>
             <Plus className="w-4 h-4" />
             Konsumen Baru
           </Button>
         </div>
+        {!canManageKonsumen && (
+          <p className="text-xs text-muted-foreground">
+            Role Anda hanya bisa melihat data konsumen. Aksi tambah/edit khusus admin, staff, atau cs.
+          </p>
+        )}
 
         {/* Table */}
         <Card>
@@ -336,7 +344,7 @@ export default function KonsumenPage() {
               <Button variant="outline" onClick={() => setSelectedKonsumen(null)}>
                 Tutup
               </Button>
-              <Button>Edit Konsumen</Button>
+              <Button disabled={!canManageKonsumen}>Edit Konsumen</Button>
             </div>
           </div>
         </div>

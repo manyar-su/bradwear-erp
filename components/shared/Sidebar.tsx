@@ -13,9 +13,12 @@ import {
   Factory,
   ChevronLeft,
   ChevronRight,
+  Wallet,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 const navItems = [
   {
@@ -53,11 +56,22 @@ const navItems = [
     href: '/affiliate-sales',
     icon: TrendingUp,
   },
+  {
+    title: 'Keuangan',
+    href: '/keuangan',
+    icon: Wallet,
+  },
+  {
+    title: 'Pengaturan',
+    href: '/pengaturan',
+    icon: Settings,
+  },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { user } = useAuth();
 
   return (
     <aside
@@ -150,6 +164,11 @@ export function Sidebar() {
       {/* Version */}
       {!collapsed && (
         <div className="p-4 border-t border-[#2D5A87]">
+          {user && (
+            <p className="text-xs text-slate-300 text-center mb-1 capitalize">
+              Role: {user.role}
+            </p>
+          )}
           <p className="text-xs text-slate-400 text-center">v1.0.0</p>
         </div>
       )}

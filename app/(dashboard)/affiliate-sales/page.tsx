@@ -39,8 +39,11 @@ import {
 } from 'lucide-react';
 import { formatRupiah, formatShortDate, getStatusBadgeVariant } from '@/lib/utils';
 import { affiliateData, commissionData, pesananData } from '@/lib/supabase/demo-data';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 export default function AffiliateSalesPage() {
+  const { can } = useAuth();
+  const canManageAffiliate = can('affiliate.manage');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isAddAffiliateOpen, setIsAddAffiliateOpen] = useState(false);
@@ -159,7 +162,11 @@ export default function AffiliateSalesPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Performa Affiliate</CardTitle>
-              <Button onClick={() => setIsAddAffiliateOpen(true)} className="gap-2">
+              <Button
+                onClick={() => canManageAffiliate && setIsAddAffiliateOpen(true)}
+                className="gap-2"
+                disabled={!canManageAffiliate}
+              >
                 <Plus className="w-4 h-4" />
                 Tambah Affiliate
               </Button>
@@ -203,7 +210,12 @@ export default function AffiliateSalesPage() {
                         {formatRupiah(stats.paidCommission)}
                       </TableCell>
                       <TableCell>
-                        <Button variant="outline" size="sm" className="gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          disabled={!canManageAffiliate}
+                        >
                           <Wallet className="w-4 h-4" />
                           Cairkan
                         </Button>
@@ -276,12 +288,12 @@ export default function AffiliateSalesPage() {
                       </TableCell>
                       <TableCell>
                         {commission.status === 'pending' && (
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" disabled={!canManageAffiliate}>
                             Approve
                           </Button>
                         )}
                         {commission.status === 'approved' && (
-                          <Button variant="default" size="sm">
+                          <Button variant="default" size="sm" disabled={!canManageAffiliate}>
                             Bayar
                           </Button>
                         )}
@@ -306,9 +318,16 @@ export default function AffiliateSalesPage() {
           </CardContent>
         </Card>
       </div>
+      {!canManageAffiliate && (
+        <div className="px-6 pb-2">
+          <p className="text-xs text-muted-foreground">
+            Role Anda hanya bisa melihat performa affiliate. Aksi approve, bayar, request, dan tambah affiliate khusus admin dan staff.
+          </p>
+        </div>
+      )}
 
       {/* Add Affiliate Modal */}
-      <Dialog open={isAddAffiliateOpen} onOpenChange={setIsAddAffiliateOpen}>
+      <Dialog open={isAddAffiliateOpen} onOpenChange={(open) => canManageAffiliate && setIsAddAffiliateOpen(open)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Tambah Affiliate Baru</DialogTitle>
@@ -337,13 +356,13 @@ export default function AffiliateSalesPage() {
             <Button variant="outline" onClick={() => setIsAddAffiliateOpen(false)}>
               Batal
             </Button>
-            <Button>Simpan</Button>
+            <Button disabled={!canManageAffiliate}>Simpan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Withdrawal Request Modal */}
-      <Dialog open={isWithdrawOpen} onOpenChange={setIsWithdrawOpen}>
+      <Dialog open={isWithdrawOpen} onOpenChange={(open) => canManageAffiliate && setIsWithdrawOpen(open)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Request Pencairan Komisi</DialogTitle>
@@ -370,7 +389,7 @@ export default function AffiliateSalesPage() {
             <Button variant="outline" onClick={() => setIsWithdrawOpen(false)}>
               Batal
             </Button>
-            <Button>Request</Button>
+            <Button disabled={!canManageAffiliate}>Request</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

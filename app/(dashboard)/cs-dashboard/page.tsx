@@ -49,8 +49,11 @@ import {
   SIZE_OPTIONS,
   STATUS_PESANAN_OPTIONS,
 } from '@/lib/constants';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 export default function CSDashboardPage() {
+  const { can } = useAuth();
+  const canManageOrders = can('orders.manage');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -151,11 +154,20 @@ export default function CSDashboardPage() {
               />
             </div>
           </div>
-          <Button onClick={() => setIsFormOpen(true)} className="gap-2">
+          <Button
+            onClick={() => canManageOrders && setIsFormOpen(true)}
+            className="gap-2"
+            disabled={!canManageOrders}
+          >
             <Plus className="w-4 h-4" />
             Pesanan Baru
           </Button>
         </div>
+        {!canManageOrders && (
+          <p className="text-xs text-muted-foreground">
+            Role Anda hanya bisa melihat antrean. Aksi tambah pesanan dan update status khusus admin, staff, atau cs.
+          </p>
+        )}
 
         {/* Orders Table */}
         <Card>
@@ -252,14 +264,14 @@ export default function CSDashboardPage() {
               <Button variant="outline" onClick={() => setSelectedOrder(null)}>
                 Tutup
               </Button>
-              <Button>Update Status</Button>
+              <Button disabled={!canManageOrders}>Update Status</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
 
       {/* New Order Form Modal */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <Dialog open={isFormOpen} onOpenChange={(open) => canManageOrders && setIsFormOpen(open)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Form Pesanan Baru</DialogTitle>
@@ -432,7 +444,7 @@ export default function CSDashboardPage() {
             <Button variant="outline" onClick={() => setIsFormOpen(false)}>
               Batal
             </Button>
-            <Button>Simpan Pesanan</Button>
+            <Button disabled={!canManageOrders}>Simpan Pesanan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

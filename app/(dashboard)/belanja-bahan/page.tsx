@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { formatRupiah, formatShortDate } from '@/lib/utils';
 import { belanjaBahanData } from '@/lib/supabase/demo-data';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 const KATEGORI_INFO = {
   kain: { label: 'Kain', icon: Package, color: 'bg-blue-100 text-blue-600' },
@@ -53,6 +54,8 @@ const KATEGORI_INFO = {
 };
 
 export default function BelanjaBahanPage() {
+  const { can } = useAuth();
+  const canManageBelanja = can('belanja.manage');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKategori, setFilterKategori] = useState('all');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -129,7 +132,11 @@ export default function BelanjaBahanPage() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <CardTitle>Log Pengeluaran</CardTitle>
-              <Button onClick={() => setIsFormOpen(true)} className="gap-2">
+              <Button
+                onClick={() => canManageBelanja && setIsFormOpen(true)}
+                className="gap-2"
+                disabled={!canManageBelanja}
+              >
                 <Plus className="w-4 h-4" />
                 Input Pengeluaran
               </Button>
@@ -179,6 +186,11 @@ export default function BelanjaBahanPage() {
             </div>
           </CardContent>
         </Card>
+        {!canManageBelanja && (
+          <p className="text-xs text-muted-foreground">
+            Role Anda hanya bisa melihat log pengeluaran. Input pengeluaran khusus admin dan staff.
+          </p>
+        )}
 
         {/* Table */}
         <Card>
@@ -225,7 +237,7 @@ export default function BelanjaBahanPage() {
       </div>
 
       {/* Input Form Modal */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <Dialog open={isFormOpen} onOpenChange={(open) => canManageBelanja && setIsFormOpen(open)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Input Pengeluaran Baru</DialogTitle>
@@ -270,7 +282,7 @@ export default function BelanjaBahanPage() {
             <Button variant="outline" onClick={() => setIsFormOpen(false)}>
               Batal
             </Button>
-            <Button>Simpan</Button>
+            <Button disabled={!canManageBelanja}>Simpan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

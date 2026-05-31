@@ -26,8 +26,11 @@ import { Search, Download, Eye } from 'lucide-react';
 import { formatRupiah, formatShortDate, getStatusBadgeVariant } from '@/lib/utils';
 import { pesananData } from '@/lib/supabase/demo-data';
 import type { Pesanan } from '@/types/database';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 export default function PenjualanPage() {
+  const { can } = useAuth();
+  const canManageFinance = can('keuangan.manage');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatusBayar, setFilterStatusBayar] = useState('all');
   const [filterStatusPesanan, setFilterStatusPesanan] = useState('all');
@@ -108,7 +111,7 @@ export default function PenjualanPage() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <CardTitle>Filter Transaksi</CardTitle>
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button variant="outline" size="sm" className="gap-2" disabled={!canManageFinance}>
                 <Download className="w-4 h-4" />
                 Export
               </Button>
@@ -178,6 +181,11 @@ export default function PenjualanPage() {
             </div>
           </CardContent>
         </Card>
+        {!canManageFinance && (
+          <p className="text-xs text-muted-foreground">
+            Role Anda bisa melihat data penjualan, namun export dibatasi untuk admin dan staff.
+          </p>
+        )}
 
         {/* Table */}
         <Card>
