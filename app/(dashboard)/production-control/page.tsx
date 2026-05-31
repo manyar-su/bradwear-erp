@@ -253,10 +253,12 @@ export default function ProductionControlPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>ID</TableHead>
                     <TableHead>Kode</TableHead>
                     <TableHead>Nama Penjahit</TableHead>
-                    <TableHead>Nama Konsumen</TableHead>
-                    <TableHead>Nama CS</TableHead>
+                    <TableHead>Model</TableHead>
+                    <TableHead>Model Detail</TableHead>
+                    <TableHead>Jumlah Pesanan</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Aksi</TableHead>
                   </TableRow>
@@ -264,20 +266,22 @@ export default function ProductionControlPage() {
                 <TableBody>
                   {filteredOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-6">
                         Tidak ada data produksi yang cocok dengan filter.
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredOrders.map((order) => (
                       <TableRow key={order.id}>
+                        <TableCell className="font-mono text-xs">{order.id}</TableCell>
                         <TableCell className="font-mono font-medium">{order.kode_barang || '-'}</TableCell>
                         <TableCell>{order.nama_penjahit || '-'}</TableCell>
-                        <TableCell>{order.konsumen || '-'}</TableCell>
-                        <TableCell>{order.cs || '-'}</TableCell>
+                        <TableCell>{order.model || '-'}</TableCell>
+                        <TableCell>{order.model_detail || '-'}</TableCell>
+                        <TableCell>{(order.jumlah_pesanan || 0).toLocaleString('id-ID')}</TableCell>
                         <TableCell>
                           <Badge variant={getStatusBadgeVariant(order.normalized_status)}>
-                            {order.normalized_status}
+                            {(order.status || order.normalized_status || '-').toString()}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -356,7 +360,10 @@ export default function ProductionControlPage() {
         </div>
 
         <Dialog open={Boolean(selectedOrder)} onOpenChange={(open) => !open && setSelectedOrder(null)}>
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogContent
+            className="max-w-5xl max-h-[90vh] overflow-y-auto"
+            overlayClassName="supports-backdrop-filter:backdrop-blur-none bg-black/20"
+          >
             <DialogHeader>
               <DialogTitle>
                 Detail Production Control {selectedOrder?.kode_barang ? `- ${selectedOrder.kode_barang}` : ''}
