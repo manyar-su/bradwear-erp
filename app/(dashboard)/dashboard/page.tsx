@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { Header } from '@/components/shared/Header';
 import { StatsCard } from '@/components/shared/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,11 +14,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  DollarSign,
+  ShoppingCart,
   Package,
   Clock,
   TrendingUp,
   ArrowRight,
+  CalendarClock,
+  ClipboardCheck,
+  Wallet,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -44,28 +48,134 @@ import {
   pesananData,
 } from '@/lib/supabase/demo-data';
 
+type DashboardPayload = {
+  stats: {
+    totalPenjualanBulanIni: number;
+    totalProduksiBulanIni: number;
+    pesananAktif: number;
+    komisiBelumCair: number;
+  };
+  penjualanData: { minggu: string; nilai: number }[];
+  kategoriData: { name: string; value: number; color: string }[];
+  topKonsumen: { nama: string; total: number }[];
+  recentOrders: {
+    id: string;
+    invoice: string;
+    konsumen?: { nama?: string };
+    kategori: string;
+    total_harga: number;
+    status_pesanan: string;
+    status_pembayaran: string;
+    target_selesai?: string;
+  }[];
+  paymentSummary?: {
+    belumBayar: number;
+    dp: number;
+    lunas: number;
+    potensiPiutang: number;
+  };
+  deadlineSoon?: {
+    id: string;
+    invoice: string;
+    konsumen?: { nama?: string };
+    target_selesai?: string;
+    daysToDeadline: number;
+  }[];
+  completionRate?: number;
+  paidOrders?: number;
+  activeOrdersCount?: number;
+};
+
 export default function DashboardPage() {
-  const stats = getDashboardStats();
-  const penjualanData = getPenjualanChartData();
-  const kategoriData = getKategoriChartData();
-  const topKonsumen = getTopKonsumen();
-  const recentOrders = pesananData.slice(0, 5);
+  const [isLiveData, setIsLiveData] = useState(false);
+  const initialData: DashboardPayload = useMemo(
+    () => ({
+      stats: getDashboardStats(),
+      penjualanData: getPenjualanChartData(),
+      kategoriData: getKategoriChartData(),
+      topKonsumen: getTopKonsumen(),
+      recentOrders: pesananData.slice(0, 5),
+      paymentSummary: pesananData.reduce(
+        (acc, order) => {
+          if (order.status_pembayaran === 'belum_bayar') acc.belumBayar += 1;
+          if (order.status_pembayaran === 'dp') acc.dp += 1;
+          if (order.status_pembayaran === 'lunas') acc.lunas += 1;
+          return acc;
+        },
+        { belumBayar: 0, dp: 0, lunas: 0, potensiPiutang: 0 }
+      ),
+      completionRate:
+        pesananData.length > 0
+          ? Math.round(
+              (pesananData.filter((order) =>
+                ['selesai', 'diambil'].includes(order.status_pesanan)
+              ).length /
+                pesananData.length) *
+                100
+            )
+          : 0,
+      paidOrders: pesananData.filter((order) => order.status_pembayaran === 'lunas')
+        .length,
+      activeOrdersCount: pesananData.filter((order) =>
+        ['menunggu', 'proses'].includes(order.status_pesanan)
+      ).length,
+      deadlineSoon: [],
+    }),
+    []
+  );
+  const [dashboardData, setDashboardData] = useState<DashboardPayload>(initialData);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadLiveData = async () => {
+      try {
+        const response = await fetch('/api/dashboard/live', { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = (await response.json()) as DashboardPayload;
+        if (!cancelled) {
+          setDashboardData(data);
+          setIsLiveData(true);
+        }
+      } catch {
+        // Keep fallback demo data when live API is unavailable.
+      }
+    };
+    void loadLiveData();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const stats = dashboardData.stats;
+  const penjualanData = dashboardData.penjualanData;
+  const kategoriData = dashboardData.kategoriData;
+  const topKonsumen = dashboardData.topKonsumen;
+  const recentOrders = dashboardData.recentOrders;
+  const paymentSummary = dashboardData.paymentSummary || {
+    belumBayar: 0,
+    dp: 0,
+    lunas: 0,
+    potensiPiutang: 0,
+  };
+  const deadlineSoon = dashboardData.deadlineSoon || [];
+  const completionRate = dashboardData.completionRate || 0;
+  const paidOrders = dashboardData.paidOrders || 0;
+  const activeOrdersCount = dashboardData.activeOrdersCount || stats.pesananAktif;
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Header
         title="Dashboard"
-        breadcrumbs={[{ label: 'Bradwear' }, { label: 'Dashboard' }]}
+        breadcrumbs={[{ label: 'Bradwear', href: '/dashboard' }, { label: 'Dashboard' }]}
       />
 
       <div className="p-6 space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
-            title="Total Penjualan Bulan Ini"
+            title="Total Order Bulan Ini"
             value={stats.totalPenjualanBulanIni}
-            icon={DollarSign}
-            isCurrency
+            icon={ShoppingCart}
             trend={{ value: 12.5, label: 'dari bulan lalu', positive: true }}
           />
           <StatsCard
@@ -82,11 +192,115 @@ export default function DashboardPage() {
             icon={Clock}
           />
           <StatsCard
-            title="Komisi Belum Cair"
+            title="Order Belum Lunas"
             value={stats.komisiBelumCair}
             icon={TrendingUp}
-            isCurrency
+            subtitle="perlu follow-up"
           />
+        </div>
+
+        <div className="flex items-center justify-end">
+          <Badge variant={isLiveData ? 'default' : 'secondary'}>
+            {isLiveData ? 'Data live Supabase' : 'Data demo (fallback)'}
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Wallet className="w-4 h-4 text-primary" />
+                Status Pembayaran
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Belum Bayar</span>
+                <Badge variant="destructive">{paymentSummary.belumBayar} order</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">DP</span>
+                <Badge variant="secondary">{paymentSummary.dp} order</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Lunas</span>
+                <Badge>{paymentSummary.lunas} order</Badge>
+              </div>
+              <div className="pt-2 border-t border-slate-100">
+                <p className="text-xs text-muted-foreground">
+                  Potensi piutang (estimasi):
+                </p>
+                <p className="text-lg font-semibold">
+                  {paymentSummary.potensiPiutang > 0
+                    ? formatRupiah(paymentSummary.potensiPiutang)
+                    : '-'}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Estimasi: order DP dihitung sisa 50%
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CalendarClock className="w-4 h-4 text-primary" />
+                Deadline 7 Hari
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {deadlineSoon.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Tidak ada deadline dekat untuk pesanan aktif.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {deadlineSoon.map((order) => (
+                    <div
+                      key={order.id}
+                      className="flex items-center justify-between gap-3 text-sm"
+                    >
+                      <div>
+                        <p className="font-medium">{order.konsumen?.nama || order.invoice}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Target {order.target_selesai}
+                        </p>
+                      </div>
+                      <Badge variant={order.daysToDeadline <= 2 ? 'destructive' : 'secondary'}>
+                        {order.daysToDeadline < 0
+                          ? `${Math.abs(order.daysToDeadline)} hari lewat`
+                          : `H-${order.daysToDeadline}`}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ClipboardCheck className="w-4 h-4 text-primary" />
+                Ringkasan Eksekusi
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-xs text-muted-foreground">Order aktif saat ini</p>
+                <p className="text-2xl font-bold">{activeOrdersCount}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Order lunas</p>
+                <p className="text-2xl font-bold">{paidOrders}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Rasio penyelesaian order</p>
+                <p className="text-2xl font-bold">{completionRate}%</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Charts Row */}
@@ -94,7 +308,7 @@ export default function DashboardPage() {
           {/* Penjualan Chart */}
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Trend Penjualan (12 Minggu Terakhir)</CardTitle>
+              <CardTitle>Trend Volume Order (8 Minggu Terakhir)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
@@ -108,11 +322,11 @@ export default function DashboardPage() {
                     />
                     <YAxis
                       tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => `Rp ${(value / 1000000).toFixed(0)}jt`}
+                      tickFormatter={(value) => `${value} pcs`}
                       tickLine={false}
                     />
                     <Tooltip
-                      formatter={(value) => [formatRupiah(value as number), 'Nilai']}
+                      formatter={(value) => [`${value} pcs`, 'Volume']}
                       contentStyle={{
                         backgroundColor: '#fff',
                         border: '1px solid #E2E8F0',
@@ -136,7 +350,7 @@ export default function DashboardPage() {
           {/* Kategori Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Produksi per Kategori</CardTitle>
+              <CardTitle>Distribusi Status Order</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
@@ -171,7 +385,7 @@ export default function DashboardPage() {
           {/* Top Konsumen */}
           <Card>
             <CardHeader>
-              <CardTitle>Top 5 Konsumen</CardTitle>
+              <CardTitle>Top 5 Konsumen (Volume)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[250px]">
@@ -181,7 +395,7 @@ export default function DashboardPage() {
                     <XAxis
                       type="number"
                       tick={{ fontSize: 11 }}
-                      tickFormatter={(value) => `Rp ${(value / 1000000).toFixed(0)}jt`}
+                      tickFormatter={(value) => `${value} pcs`}
                     />
                     <YAxis
                       dataKey="nama"
@@ -190,7 +404,7 @@ export default function DashboardPage() {
                       width={100}
                     />
                     <Tooltip
-                      formatter={(value) => [formatRupiah(value as number), 'Total']}
+                      formatter={(value) => [`${value} pcs`, 'Total']}
                     />
                     <Bar dataKey="total" fill="#1E3A5F" radius={[0, 4, 4, 0]} />
                   </BarChart>
@@ -216,8 +430,10 @@ export default function DashboardPage() {
                   <TableRow>
                     <TableHead>Invoice</TableHead>
                     <TableHead>Konsumen</TableHead>
+                    <TableHead>Target</TableHead>
                     <TableHead>Kategori</TableHead>
-                    <TableHead>Total</TableHead>
+                    <TableHead>Pembayaran</TableHead>
+                    <TableHead>Qty</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -228,9 +444,13 @@ export default function DashboardPage() {
                         {order.invoice}
                       </TableCell>
                       <TableCell>{order.konsumen?.nama || '-'}</TableCell>
+                      <TableCell>{order.target_selesai || '-'}</TableCell>
                       <TableCell className="capitalize">{order.kategori}</TableCell>
+                      <TableCell className="capitalize">
+                        {order.status_pembayaran.replace('_', ' ')}
+                      </TableCell>
                       <TableCell className="font-medium">
-                        {formatRupiah(order.total_harga)}
+                        {order.total_harga.toLocaleString('id-ID')} pcs
                       </TableCell>
                       <TableCell>
                         <Badge

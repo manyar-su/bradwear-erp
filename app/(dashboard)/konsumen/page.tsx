@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { Header } from '@/components/shared/Header';
 import { DetailModal } from '@/components/shared/DetailModal';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -64,7 +64,7 @@ export default function KonsumenPage() {
     <div className="min-h-screen bg-slate-50">
       <Header
         title="Konsumen"
-        breadcrumbs={[{ label: 'Bradwear' }, { label: 'Konsumen' }]}
+        breadcrumbs={[{ label: 'Bradwear', href: '/dashboard' }, { label: 'Konsumen' }]}
       />
 
       <div className="p-6 space-y-6">

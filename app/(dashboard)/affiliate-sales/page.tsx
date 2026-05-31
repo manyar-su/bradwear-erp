@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { Header } from '@/components/shared/Header';
@@ -29,7 +29,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
-  TrendingUp,
   Users,
   DollarSign,
   Clock,
@@ -40,7 +39,6 @@ import {
 } from 'lucide-react';
 import { formatRupiah, formatShortDate, getStatusBadgeVariant } from '@/lib/utils';
 import { affiliateData, commissionData, pesananData } from '@/lib/supabase/demo-data';
-import type { Affiliate, AffiliateCommission } from '@/types/database';
 
 export default function AffiliateSalesPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -96,7 +94,7 @@ export default function AffiliateSalesPage() {
     <div className="min-h-screen bg-slate-50">
       <Header
         title="Affiliate Sales"
-        breadcrumbs={[{ label: 'Bradwear' }, { label: 'Affiliate Sales' }]}
+        breadcrumbs={[{ label: 'Bradwear', href: '/dashboard' }, { label: 'Affiliate Sales' }]}
       />
 
       <div className="p-6 space-y-6">

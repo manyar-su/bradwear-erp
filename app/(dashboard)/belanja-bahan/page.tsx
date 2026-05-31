@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { Header } from '@/components/shared/Header';
@@ -37,13 +37,11 @@ import {
   ArrowDownCircle,
   Scissors,
   Palette,
-  Sparkles,
   Settings,
   MoreHorizontal,
 } from 'lucide-react';
 import { formatRupiah, formatShortDate } from '@/lib/utils';
 import { belanjaBahanData } from '@/lib/supabase/demo-data';
-import type { BelanjaBahan } from '@/types/database';
 
 const KATEGORI_INFO = {
   kain: { label: 'Kain', icon: Package, color: 'bg-blue-100 text-blue-600' },
@@ -84,7 +82,7 @@ export default function BelanjaBahanPage() {
     <div className="min-h-screen bg-slate-50">
       <Header
         title="Belanja Bahan"
-        breadcrumbs={[{ label: 'Bradwear' }, { label: 'Belanja Bahan' }]}
+        breadcrumbs={[{ label: 'Bradwear', href: '/dashboard' }, { label: 'Belanja Bahan' }]}
       />
 
       <div className="p-6 space-y-6">

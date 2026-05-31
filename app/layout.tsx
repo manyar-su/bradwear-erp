@@ -1,28 +1,26 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Ubuntu } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const ubuntuSans = Ubuntu({
+  variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const ubuntuMono = Ubuntu({
   variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
 });
 
 export const metadata: Metadata = {
   title: "Bradwear Dashboard - ERP Sistem Manajemen Garmen",
   description: "Sistem ERP untuk manajemen produksi garmen - Bradwear Dashboard",
   icons: {
-    icon: [
-      {
-        url: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='15' fill='%231E3A5F'/><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' font-family='Arial' font-weight='bold' font-size='50' fill='%23F59E0B'>BW</text></svg>",
-        type: "image/svg+xml",
-      },
-    ],
+    icon: "/brand/logo-bradwear.png",
+    apple: "/brand/logo-bradwear.png",
   },
 };
 
@@ -32,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="id" className={`${ubuntuSans.variable} ${ubuntuMono.variable}`}>
       <body className="min-h-screen bg-slate-50 font-sans antialiased">
         <TooltipProvider>
           {children}

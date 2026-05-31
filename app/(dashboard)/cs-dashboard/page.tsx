@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { Header } from '@/components/shared/Header';
@@ -93,7 +93,7 @@ export default function CSDashboardPage() {
     <div className="min-h-screen bg-slate-50">
       <Header
         title="CS Dashboard"
-        breadcrumbs={[{ label: 'Bradwear' }, { label: 'CS Dashboard' }]}
+        breadcrumbs={[{ label: 'Bradwear', href: '/dashboard' }, { label: 'CS Dashboard' }]}
       />
 
       <div className="p-6 space-y-6">

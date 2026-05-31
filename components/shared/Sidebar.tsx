@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -9,6 +10,7 @@ import {
   ShoppingCart,
   Package,
   TrendingUp,
+  Factory,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -37,6 +39,11 @@ const navItems = [
     icon: ShoppingCart,
   },
   {
+    title: 'Production Control',
+    href: '/production-control',
+    icon: Factory,
+  },
+  {
     title: 'Belanja Bahan',
     href: '/belanja-bahan',
     icon: Package,
@@ -63,8 +70,15 @@ export function Sidebar() {
       <div className="flex items-center justify-between p-5 border-b border-[#2D5A87]">
         {!collapsed && (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#F59E0B] flex items-center justify-center">
-              <span className="font-bold text-[#1E3A5F] text-lg">BW</span>
+            <div className="w-10 h-10 rounded-lg overflow-hidden bg-black/30">
+              <Image
+                src="/brand/logo-bradwear.png"
+                alt="Bradwear Logo"
+                width={40}
+                height={40}
+                className="w-full h-full object-cover"
+                priority
+              />
             </div>
             <div>
               <h1 className="font-bold text-lg leading-tight">Bradwear</h1>
@@ -73,8 +87,15 @@ export function Sidebar() {
           </div>
         )}
         {collapsed && (
-          <div className="w-10 h-10 rounded-lg bg-[#F59E0B] flex items-center justify-center mx-auto">
-            <span className="font-bold text-[#1E3A5F] text-lg">BW</span>
+          <div className="w-10 h-10 rounded-lg overflow-hidden bg-black/30 mx-auto">
+            <Image
+              src="/brand/logo-bradwear.png"
+              alt="Bradwear Logo"
+              width={40}
+              height={40}
+              className="w-full h-full object-cover"
+              priority
+            />
           </div>
         )}
       </div>

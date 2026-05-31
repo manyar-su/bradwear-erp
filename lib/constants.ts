@@ -27,6 +27,12 @@ export const NAV_ITEMS = [
     description: 'Laporan transaksi penjualan',
   },
   {
+    title: 'Production Control',
+    href: '/production-control',
+    icon: 'Factory',
+    description: 'Kontrol produksi terintegrasi Bradflow',
+  },
+  {
     title: 'Belanja Bahan',
     href: '/belanja-bahan',
     icon: 'Package',

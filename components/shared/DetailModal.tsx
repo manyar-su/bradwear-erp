@@ -5,9 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn, formatRupiah, formatTanggal, getStatusBadgeVariant } from '@/lib/utils';
+import { formatRupiah, formatTanggal, getStatusBadgeVariant } from '@/lib/utils';
 import type { Pesanan } from '@/types/database';
-import { useState } from 'react';
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -16,14 +15,10 @@ interface DetailModalProps {
 }
 
 export function DetailModal({ isOpen, onClose, data }: DetailModalProps) {
-  const [isPrinting, setIsPrinting] = useState(false);
-
   if (!isOpen || !data) return null;
 
   const handlePrint = () => {
-    setIsPrinting(true);
     window.print();
-    setTimeout(() => setIsPrinting(false), 1000);
   };
 
   const sizeLabels: Record<string, string> = {

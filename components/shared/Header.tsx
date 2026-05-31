@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Bell, Search, User, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -31,9 +32,9 @@ export function Header({ title, breadcrumbs }: HeaderProps) {
                 <span key={index} className="flex items-center gap-2">
                   {index > 0 && <span>/</span>}
                   {crumb.href ? (
-                    <a href={crumb.href} className="hover:text-primary">
+                    <Link href={crumb.href} className="hover:text-primary">
                       {crumb.label}
-                    </a>
+                    </Link>
                   ) : (
                     <span className="text-foreground font-medium">{crumb.label}</span>
                   )}

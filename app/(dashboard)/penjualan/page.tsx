@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { Header } from '@/components/shared/Header';
@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Filter, Download, Eye } from 'lucide-react';
+import { Search, Download, Eye } from 'lucide-react';
 import { formatRupiah, formatShortDate, getStatusBadgeVariant } from '@/lib/utils';
 import { pesananData } from '@/lib/supabase/demo-data';
 import type { Pesanan } from '@/types/database';
@@ -66,7 +66,7 @@ export default function PenjualanPage() {
     <div className="min-h-screen bg-slate-50">
       <Header
         title="Penjualan"
-        breadcrumbs={[{ label: 'Bradwear' }, { label: 'Penjualan' }]}
+        breadcrumbs={[{ label: 'Bradwear', href: '/dashboard' }, { label: 'Penjualan' }]}
       />
 
       <div className="p-6 space-y-6">
