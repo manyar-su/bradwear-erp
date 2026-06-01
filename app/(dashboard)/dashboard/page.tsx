@@ -40,13 +40,6 @@ import {
   Legend,
 } from 'recharts';
 import { formatRupiah, getStatusBadgeVariant } from '@/lib/utils';
-import {
-  getDashboardStats,
-  getPenjualanChartData,
-  getKategoriChartData,
-  getTopKonsumen,
-  pesananData,
-} from '@/lib/supabase/demo-data';
 
 type DashboardPayload = {
   stats: {
@@ -90,35 +83,20 @@ export default function DashboardPage() {
   const [isLiveData, setIsLiveData] = useState(false);
   const initialData: DashboardPayload = useMemo(
     () => ({
-      stats: getDashboardStats(),
-      penjualanData: getPenjualanChartData(),
-      kategoriData: getKategoriChartData(),
-      topKonsumen: getTopKonsumen(),
-      recentOrders: pesananData.slice(0, 5),
-      paymentSummary: pesananData.reduce(
-        (acc, order) => {
-          if (order.status_pembayaran === 'belum_bayar') acc.belumBayar += 1;
-          if (order.status_pembayaran === 'dp') acc.dp += 1;
-          if (order.status_pembayaran === 'lunas') acc.lunas += 1;
-          return acc;
-        },
-        { belumBayar: 0, dp: 0, lunas: 0, potensiPiutang: 0 }
-      ),
-      completionRate:
-        pesananData.length > 0
-          ? Math.round(
-              (pesananData.filter((order) =>
-                ['selesai', 'diambil'].includes(order.status_pesanan)
-              ).length /
-                pesananData.length) *
-                100
-            )
-          : 0,
-      paidOrders: pesananData.filter((order) => order.status_pembayaran === 'lunas')
-        .length,
-      activeOrdersCount: pesananData.filter((order) =>
-        ['menunggu', 'proses'].includes(order.status_pesanan)
-      ).length,
+      stats: {
+        totalPenjualanBulanIni: 0,
+        totalProduksiBulanIni: 0,
+        pesananAktif: 0,
+        komisiBelumCair: 0,
+      },
+      penjualanData: [],
+      kategoriData: [],
+      topKonsumen: [],
+      recentOrders: [],
+      paymentSummary: { belumBayar: 0, dp: 0, lunas: 0, potensiPiutang: 0 },
+      completionRate: 0,
+      paidOrders: 0,
+      activeOrdersCount: 0,
       deadlineSoon: [],
     }),
     []
@@ -137,7 +115,7 @@ export default function DashboardPage() {
           setIsLiveData(true);
         }
       } catch {
-        // Keep fallback demo data when live API is unavailable.
+        // keep empty state when API fails
       }
     };
     void loadLiveData();
@@ -201,7 +179,7 @@ export default function DashboardPage() {
 
         <div className="flex items-center justify-end">
           <Badge variant={isLiveData ? 'default' : 'secondary'}>
-            {isLiveData ? 'Data live Supabase' : 'Data demo (fallback)'}
+            {isLiveData ? 'Data live Supabase' : 'Menunggu data live Supabase'}
           </Badge>
         </div>
 

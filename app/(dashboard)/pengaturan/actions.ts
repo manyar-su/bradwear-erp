@@ -2,12 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { assertPermission } from '@/lib/auth/server';
-import { createClient } from '@/lib/supabase/server';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import type { AppRole } from '@/types/auth';
 
 const ROLE_VALUES: AppRole[] = ['admin', 'staff', 'cs', 'penjahit'];
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function parseRole(value: FormDataEntryValue | null): AppRole | null {
   if (typeof value !== 'string') return null;
@@ -15,7 +13,7 @@ function parseRole(value: FormDataEntryValue | null): AppRole | null {
   return null;
 }
 
-export async function upsertUserRoleAction(formData: FormData) {
+export async function upsertUserProfileAction(formData: FormData) {
   try {
     await assertPermission('settings.manage');
   } catch (error) {
@@ -23,39 +21,44 @@ export async function upsertUserRoleAction(formData: FormData) {
     return { ok: false, message };
   }
 
-  const userId = String(formData.get('user_id') || '').trim();
+  const email = String(formData.get('email') || '').trim().toLowerCase();
   const role = parseRole(formData.get('role'));
   const displayName = String(formData.get('display_name') || '').trim();
+  const statusText = String(formData.get('status_text') || '').trim();
+  const avatarUrl = String(formData.get('avatar_url') || '').trim();
   const isActiveRaw = String(formData.get('is_active') || 'false');
   const isActive = isActiveRaw === 'true' || isActiveRaw === 'on';
 
-  if (!UUID_REGEX.test(userId)) {
-    return { ok: false, message: 'Format user_id tidak valid (wajib UUID).' };
+  if (!email || !email.endsWith('@bradwear.com')) {
+    return { ok: false, message: 'Email wajib domain @bradwear.com.' };
   }
-
   if (!role) {
     return { ok: false, message: 'Role tidak valid.' };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.from('user_roles').upsert(
-    {
-      user_id: userId,
+  const supabase = getSupabaseAdmin();
+  const profilePayload = {
+      email,
       role,
       display_name: displayName || null,
+      status_text: statusText || null,
+      avatar_url: avatarUrl || null,
       is_active: isActive,
-    },
-    { onConflict: 'user_id' }
-  );
+      updated_at: new Date().toISOString(),
+    };
+
+  const { error } = await supabase
+    .from('user_profiles')
+    .upsert([profilePayload] as unknown as never[], { onConflict: 'email' });
 
   if (error) {
     return { ok: false, message: error.message };
   }
 
   revalidatePath('/pengaturan');
-  return { ok: true, message: 'Role berhasil disimpan.' };
+  return { ok: true, message: 'Profil user berhasil disimpan.' };
 }
 
-export async function submitUserRoleAction(formData: FormData) {
-  await upsertUserRoleAction(formData);
+export async function submitUserProfileAction(formData: FormData) {
+  await upsertUserProfileAction(formData);
 }

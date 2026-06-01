@@ -14,8 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { AppRole, UserRoleRow } from '@/types/auth';
-import { submitUserRoleAction, upsertUserRoleAction } from '@/app/(dashboard)/pengaturan/actions';
+import type { AppRole, UserProfileRow } from '@/types/auth';
+import { submitUserProfileAction, upsertUserProfileAction } from '@/app/(dashboard)/pengaturan/actions';
 import { useAuth } from '@/components/providers/AuthProvider';
 
 const ROLE_OPTIONS: AppRole[] = ['admin', 'staff', 'cs', 'penjahit'];
@@ -35,12 +35,12 @@ function InlineSaveButton({ disabled }: { disabled: boolean }) {
   );
 }
 
-export function PengaturanClient({ rows }: { rows: UserRoleRow[] }) {
+export function PengaturanClient({ rows }: { rows: UserProfileRow[] }) {
   const { can } = useAuth();
   const canManageSettings = can('settings.manage');
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     async (_prevState, formData) => {
-      return upsertUserRoleAction(formData);
+      return upsertUserProfileAction(formData);
     },
     INITIAL_STATE
   );
@@ -55,16 +55,18 @@ export function PengaturanClient({ rows }: { rows: UserRoleRow[] }) {
       <div className="p-6 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Manajemen Role User</CardTitle>
+            <CardTitle>Manajemen User Profile & Role</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Semua role dapat melihat halaman ini. Aksi assign role dan aktivasi user hanya untuk admin/staff.
+              Semua role bisa melihat halaman ini. Aksi update role/status hanya untuk admin/staff.
             </p>
 
-            <form action={formAction} className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <Input name="user_id" placeholder="User ID (UUID)" disabled={!canManageSettings || pending} />
+            <form action={formAction} className="grid grid-cols-1 md:grid-cols-6 gap-3">
+              <Input name="email" placeholder="Email @bradwear.com" disabled={!canManageSettings || pending} />
               <Input name="display_name" placeholder="Display Name" disabled={!canManageSettings || pending} />
+              <Input name="status_text" placeholder="Status Text" disabled={!canManageSettings || pending} />
+              <Input name="avatar_url" placeholder="Avatar URL" disabled={!canManageSettings || pending} />
               <select
                 name="role"
                 defaultValue="penjahit"
@@ -77,18 +79,20 @@ export function PengaturanClient({ rows }: { rows: UserRoleRow[] }) {
                   </option>
                 ))}
               </select>
-              <select
-                name="is_active"
-                defaultValue="true"
-                className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-sm"
-                disabled={!canManageSettings || pending}
-              >
-                <option value="true">Aktif</option>
-                <option value="false">Nonaktif</option>
-              </select>
-              <Button type="submit" disabled={!canManageSettings || pending}>
-                {pending ? 'Menyimpan...' : 'Tambah/Update User'}
-              </Button>
+              <div className="flex items-center gap-2">
+                <select
+                  name="is_active"
+                  defaultValue="true"
+                  className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-sm flex-1"
+                  disabled={!canManageSettings || pending}
+                >
+                  <option value="true">Aktif</option>
+                  <option value="false">Nonaktif</option>
+                </select>
+                <Button type="submit" disabled={!canManageSettings || pending}>
+                  {pending ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
             </form>
 
             {state.message && (
@@ -107,14 +111,15 @@ export function PengaturanClient({ rows }: { rows: UserRoleRow[] }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Daftar User Roles</CardTitle>
+            <CardTitle>Daftar User Profiles</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User ID</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Display Name</TableHead>
+                  <TableHead>Status Text</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Aksi</TableHead>
@@ -123,15 +128,16 @@ export function PengaturanClient({ rows }: { rows: UserRoleRow[] }) {
               <TableBody>
                 {rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      Belum ada data `user_roles`.
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      Belum ada data `user_profiles`.
                     </TableCell>
                   </TableRow>
                 ) : (
                   rows.map((row) => (
-                    <TableRow key={row.user_id}>
-                      <TableCell className="font-mono text-xs">{row.user_id}</TableCell>
+                    <TableRow key={row.email}>
+                      <TableCell className="font-medium">{row.email}</TableCell>
                       <TableCell>{row.display_name || '-'}</TableCell>
+                      <TableCell>{row.status_text || '-'}</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="capitalize">
                           {row.role}
@@ -143,9 +149,11 @@ export function PengaturanClient({ rows }: { rows: UserRoleRow[] }) {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <form action={submitUserRoleAction} className="flex flex-wrap items-center gap-2">
-                          <input type="hidden" name="user_id" value={row.user_id} />
+                        <form action={submitUserProfileAction} className="flex flex-wrap items-center gap-2">
+                          <input type="hidden" name="email" value={row.email} />
                           <input type="hidden" name="display_name" value={row.display_name || ''} />
+                          <input type="hidden" name="status_text" value={row.status_text || ''} />
+                          <input type="hidden" name="avatar_url" value={row.avatar_url || ''} />
                           <select
                             name="role"
                             defaultValue={row.role}
@@ -181,3 +189,4 @@ export function PengaturanClient({ rows }: { rows: UserRoleRow[] }) {
     </div>
   );
 }
+

@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { EMAIL_COOKIE, NAME_COOKIE, ROLE_COOKIE, SESSION_COOKIE } from '@/lib/auth/session';
@@ -96,13 +96,16 @@ export function Header({ title, breadcrumbs }: HeaderProps) {
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">
                 <Avatar className="w-8 h-8">
+                  {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={user.displayName} /> : null}
                   <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden lg:flex flex-col items-start">
                   <span className="font-medium text-sm leading-tight">{user.displayName}</span>
-                  <span className="text-[11px] text-muted-foreground leading-tight">{user.role}</span>
+                  <span className="text-[11px] text-muted-foreground leading-tight">
+                    {user.statusText || user.role}
+                  </span>
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[240px]">
@@ -113,7 +116,7 @@ export function Header({ title, breadcrumbs }: HeaderProps) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/profil')}>
                   <User className="w-4 h-4 mr-2" />
                   Profil
                   <Badge variant="secondary" className="ml-auto capitalize">

@@ -1,30 +1,64 @@
 import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { can, DEFAULT_ROLE } from '@/lib/auth/permissions';
-import { EMAIL_COOKIE, NAME_COOKIE, ROLE_COOKIE, SESSION_COOKIE, normalizeRole } from '@/lib/auth/session';
+import { EMAIL_COOKIE, SESSION_COOKIE, normalizeRole } from '@/lib/auth/session';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import type { AppRole, AuthUserContext, PermissionKey } from '@/types/auth';
 
 export const getCurrentUserContext = cache(async (): Promise<AuthUserContext | null> => {
   const cookieStore = await cookies();
   const hasSession = cookieStore.get(SESSION_COOKIE)?.value === '1';
-  const email = cookieStore.get(EMAIL_COOKIE)?.value || '';
+  const rawEmail = cookieStore.get(EMAIL_COOKIE)?.value || '';
+  const email = decodeURIComponent(rawEmail || '').trim().toLowerCase();
+
   if (!hasSession || !email) {
     return null;
   }
 
-  const role = normalizeRole(cookieStore.get(ROLE_COOKIE)?.value || DEFAULT_ROLE);
-  const displayName =
-    cookieStore.get(NAME_COOKIE)?.value ||
-    email.split('@')[0] ||
-    'User';
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: rawData } = await supabase
+      .from('user_profiles')
+      .select('email, display_name, role, avatar_url, status_text, is_active')
+      .eq('email', email)
+      .maybeSingle();
+    const data = (rawData || null) as {
+      email: string;
+      display_name: string | null;
+      role: string | null;
+      avatar_url: string | null;
+      status_text: string | null;
+      is_active: boolean | null;
+    } | null;
 
-  return {
-    userId: email,
-    email,
-    displayName,
-    role,
-    isActive: true,
-  };
+    if (!data) {
+      return {
+        userId: email,
+        email,
+        displayName: email.split('@')[0] || 'User',
+        role: DEFAULT_ROLE,
+        isActive: true,
+      };
+    }
+
+    return {
+      userId: data.email,
+      email: data.email,
+      displayName: data.display_name || data.email.split('@')[0] || 'User',
+      role: normalizeRole(data.role || DEFAULT_ROLE),
+      isActive: data.is_active ?? true,
+      avatarUrl: data.avatar_url,
+      statusText: data.status_text,
+    };
+  } catch {
+    return {
+      userId: email,
+      email,
+      displayName: email.split('@')[0] || 'User',
+      role: DEFAULT_ROLE,
+      isActive: true,
+    };
+  }
 });
 
 export async function getCurrentUserRole(): Promise<AppRole | null> {

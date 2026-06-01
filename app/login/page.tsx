@@ -8,11 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import {
-  EMAIL_COOKIE,
   INTERNAL_DOMAIN,
-  NAME_COOKIE,
-  ROLE_COOKIE,
-  SESSION_COOKIE,
   isInternalEmail,
   normalizeInternalEmail,
 } from '@/lib/auth/session';
@@ -48,15 +44,6 @@ export default function LoginPage() {
     return isInternalEmail(value);
   };
 
-  const persistLocalSession = (payload: { email: string; displayName: string; role: SignupRole }) => {
-    const maxAge = 60 * 60 * 24 * 14;
-    const base = `Path=/; Max-Age=${maxAge}; SameSite=Lax`;
-    document.cookie = `${SESSION_COOKIE}=1; ${base}`;
-    document.cookie = `${EMAIL_COOKIE}=${encodeURIComponent(payload.email)}; ${base}`;
-    document.cookie = `${NAME_COOKIE}=${encodeURIComponent(payload.displayName)}; ${base}`;
-    document.cookie = `${ROLE_COOKIE}=${payload.role}; ${base}`;
-  };
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     resetFeedback();
@@ -75,24 +62,30 @@ export default function LoginPage() {
     setEmail(normalizedEmail);
     setLoading(true);
 
-    if (mode === 'login') {
-      persistLocalSession({
-        email: normalizedEmail,
-        displayName: normalizedEmail.split('@')[0],
-        role: 'penjahit',
+    try {
+      const response = await fetch('/api/auth/internal-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          displayName: mode === 'register' ? displayName.trim() : normalizedEmail.split('@')[0],
+          role: mode === 'register' ? signupRole : 'penjahit',
+        }),
       });
+
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(result.error || 'Login gagal.');
+        return;
+      }
+
       router.replace(getNextPath());
       router.refresh();
-      return;
+    } catch {
+      setError('Tidak bisa terhubung ke server login.');
+    } finally {
+      setLoading(false);
     }
-
-    persistLocalSession({
-      email: normalizedEmail,
-      displayName: displayName.trim() || normalizedEmail.split('@')[0],
-      role: signupRole,
-    });
-    router.replace(getNextPath());
-    router.refresh();
   };
 
   return (

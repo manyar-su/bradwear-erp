@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Header } from '@/components/shared/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -23,72 +31,224 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Plus,
-  Search,
-  Clock,
-  CheckCircle2,
-  Package,
-  Truck,
-  XCircle,
-} from 'lucide-react';
-import { formatRupiah, formatTanggal, getStatusBadgeVariant } from '@/lib/utils';
-import { pesananData, konsumenData, affiliateData } from '@/lib/supabase/demo-data';
-import type { Pesanan } from '@/types/database';
-import {
-  KATEGORI_OPTIONS,
-  TIPE_LENGAN_OPTIONS,
-  POTONGAN_OPTIONS,
-  SIZE_OPTIONS,
-  STATUS_PESANAN_OPTIONS,
-} from '@/lib/constants';
+import { Plus, Search, ScanLine, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { getStatusBadgeVariant } from '@/lib/utils';
+
+type OrderItem = {
+  id: string;
+  kode_barang: string | null;
+  nama_penjahit: string | null;
+  model: string | null;
+  model_detail: string | null;
+  jumlah_pesanan: number | null;
+  status: string | null;
+  payment_status: string | null;
+  cs: string | null;
+  konsumen: string | null;
+  warna: string | null;
+  tanggal_order: string | null;
+  tanggal_target_selesai: string | null;
+  deskripsi_pekerjaan: string | null;
+};
+
+type OcrResponse = {
+  normalized: {
+    kodeBarang: string;
+    cs: string;
+    konsumen: string;
+    model: string;
+    warna: string;
+    tanggalOrder: string;
+    tanggalTargetSelesai: string;
+    jumlahPesanan: number;
+    status: string;
+    deskripsiPekerjaan: string;
+    sizeDetails: unknown[];
+  };
+};
+
+const STATUS_OPTIONS = ['Proses', 'Beres', 'Menunggu', 'Batal'] as const;
+const PAYMENT_OPTIONS = ['Belum Bayar', 'DP', 'Sudah Bayar'] as const;
 
 export default function CSDashboardPage() {
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const canManageOrders = can('orders.manage');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<Pesanan | null>(null);
 
-  const filteredOrders = pesananData.filter((order) => {
-    const matchesSearch =
-      order.invoice.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.konsumen?.nama.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || order.status_pesanan === statusFilter;
-    return matchesSearch && matchesStatus;
+  const [items, setItems] = useState<OrderItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [form, setForm] = useState({
+    kode_barang: '',
+    konsumen: '',
+    cs: user?.displayName || '',
+    nama_penjahit: '',
+    model: '',
+    model_detail: '',
+    warna: '',
+    tanggal_order: '',
+    tanggal_target_selesai: '',
+    jumlah_pesanan: 0,
+    status: 'Proses',
+    payment_status: 'Belum Bayar',
+    deskripsi_pekerjaan: '',
+    size_details: [] as unknown[],
   });
 
-  const statusCounts = {
-    menunggu: pesananData.filter((o) => o.status_pesanan === 'menunggu').length,
-    proses: pesananData.filter((o) => o.status_pesanan === 'proses').length,
-    selesai: pesananData.filter((o) => o.status_pesanan === 'selesai').length,
-    diambil: pesananData.filter((o) => o.status_pesanan === 'diambil').length,
-    batal: pesananData.filter((o) => o.status_pesanan === 'batal').length,
+  const loadOrders = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/orders', { cache: 'no-store' });
+      const data = (await response.json()) as { items?: OrderItem[]; error?: string };
+      if (!response.ok) {
+        setError(data.error || 'Gagal memuat order.');
+        return;
+      }
+      setItems(data.items || []);
+    } catch {
+      setError('Tidak bisa terhubung ke server.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'menunggu':
-        return <Clock className="w-4 h-4" />;
-      case 'proses':
-        return <Package className="w-4 h-4" />;
-      case 'selesai':
-        return <CheckCircle2 className="w-4 h-4" />;
-      case 'diambil':
-        return <Truck className="w-4 h-4" />;
-      case 'batal':
-        return <XCircle className="w-4 h-4" />;
-      default:
-        return null;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadOrders();
+  }, []);
+
+  useEffect(() => {
+    if (user?.displayName) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setForm((prev) => ({ ...prev, cs: prev.cs || user.displayName }));
+    }
+  }, [user?.displayName]);
+
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const query = searchTerm.toLowerCase();
+      return (
+        (item.kode_barang || '').toLowerCase().includes(query) ||
+        (item.konsumen || '').toLowerCase().includes(query) ||
+        (item.model || '').toLowerCase().includes(query)
+      );
+    });
+  }, [items, searchTerm]);
+
+  const resetForm = () => {
+    setForm({
+      kode_barang: '',
+      konsumen: '',
+      cs: user?.displayName || '',
+      nama_penjahit: '',
+      model: '',
+      model_detail: '',
+      warna: '',
+      tanggal_order: '',
+      tanggal_target_selesai: '',
+      jumlah_pesanan: 0,
+      status: 'Proses',
+      payment_status: 'Belum Bayar',
+      deskripsi_pekerjaan: '',
+      size_details: [],
+    });
+  };
+
+  const submitOrder = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(data.error || 'Gagal menyimpan order.');
+        return;
+      }
+      setIsFormOpen(false);
+      resetForm();
+      await loadOrders();
+    } catch {
+      setError('Tidak bisa terhubung ke server.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateOrderStatus = async (id: string, status: string) => {
+    setError(null);
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(data.error || 'Gagal update status.');
+        return;
+      }
+      await loadOrders();
+    } catch {
+      setError('Tidak bisa terhubung ke server.');
+    }
+  };
+
+  const handleOcrFile = async (file: File) => {
+    setOcrLoading(true);
+    setError(null);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const value = String(reader.result || '');
+          const encoded = value.includes(',') ? value.split(',')[1] : value;
+          resolve(encoded);
+        };
+        reader.onerror = () => reject(new Error('FileReader error'));
+        reader.readAsDataURL(file);
+      });
+
+      const response = await fetch('/api/ocr/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64 }),
+      });
+      const data = (await response.json()) as OcrResponse & { error?: string };
+      if (!response.ok) {
+        setError(data.error || 'OCR gagal.');
+        return;
+      }
+      const ocr = data.normalized;
+      setForm((prev) => ({
+        ...prev,
+        kode_barang: ocr.kodeBarang || prev.kode_barang,
+        konsumen: ocr.konsumen || prev.konsumen,
+        cs: ocr.cs || prev.cs,
+        model: ocr.model || prev.model,
+        warna: ocr.warna || prev.warna,
+        tanggal_order: ocr.tanggalOrder || prev.tanggal_order,
+        tanggal_target_selesai: ocr.tanggalTargetSelesai || prev.tanggal_target_selesai,
+        jumlah_pesanan: ocr.jumlahPesanan || prev.jumlah_pesanan,
+        status: ocr.status || prev.status,
+        deskripsi_pekerjaan: ocr.deskripsiPekerjaan || prev.deskripsi_pekerjaan,
+        size_details: ocr.sizeDetails || prev.size_details,
+      }));
+    } catch {
+      setError('Gagal memproses OCR.');
+    } finally {
+      setOcrLoading(false);
     }
   };
 
@@ -100,62 +260,18 @@ export default function CSDashboardPage() {
       />
 
       <div className="p-6 space-y-6">
-        {/* Stats Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {STATUS_PESANAN_OPTIONS.map((status) => (
-            <Card
-              key={status.value}
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                statusFilter === status.value ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() =>
-                setStatusFilter(statusFilter === status.value ? 'all' : status.value)
-              }
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{status.label}</p>
-                    <p className="text-2xl font-bold">
-                      {statusCounts[status.value as keyof typeof statusCounts] || 0}
-                    </p>
-                  </div>
-                  <div
-                    className={`p-2 rounded-lg ${
-                      status.value === 'menunggu'
-                        ? 'bg-yellow-100 text-yellow-600'
-                        : status.value === 'proses'
-                          ? 'bg-blue-100 text-blue-600'
-                          : status.value === 'selesai'
-                            ? 'bg-green-100 text-green-600'
-                            : status.value === 'diambil'
-                              ? 'bg-purple-100 text-purple-600'
-                              : 'bg-red-100 text-red-600'
-                    }`}
-                  >
-                    {getStatusIcon(status.value)}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Actions Bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4 w-full sm:w-auto">
-            <div className="relative flex-1 sm:flex-none">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Cari invoice atau konsumen..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full sm:w-[300px]"
-              />
-            </div>
+          <div className="relative w-full sm:w-[320px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari kode/konsumen/model..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="pl-10"
+            />
           </div>
           <Button
-            onClick={() => canManageOrders && setIsFormOpen(true)}
+            onClick={() => setIsFormOpen(true)}
             className="gap-2"
             disabled={!canManageOrders}
           >
@@ -165,59 +281,83 @@ export default function CSDashboardPage() {
         </div>
         {!canManageOrders && (
           <p className="text-xs text-muted-foreground">
-            Role Anda hanya bisa melihat antrean. Aksi tambah pesanan dan update status khusus admin, staff, atau cs.
+            Role Anda hanya bisa melihat antrean. Input pesanan dan update status khusus admin, staff, atau cs.
           </p>
         )}
+        {error && (
+          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        )}
 
-        {/* Orders Table */}
         <Card>
           <CardHeader>
             <CardTitle>Antrean Produksi</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Kode</TableHead>
                   <TableHead>Konsumen</TableHead>
-                  <TableHead>Kategori</TableHead>
-                  <TableHead>Jumlah</TableHead>
-                  <TableHead>Total</TableHead>
+                  <TableHead>Model</TableHead>
+                  <TableHead>Qty</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>CS</TableHead>
+                  <TableHead>Pembayaran</TableHead>
+                  <TableHead>Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => (
-                  <TableRow
-                    key={order.id}
-                    className="cursor-pointer hover:bg-slate-50"
-                    onClick={() => setSelectedOrder(order)}
-                  >
-                    <TableCell className="font-mono font-medium">{order.invoice}</TableCell>
-                    <TableCell>{formatTanggal(order.tanggal_order)}</TableCell>
-                    <TableCell className="font-medium">{order.konsumen?.nama || '-'}</TableCell>
-                    <TableCell className="capitalize">{order.kategori}</TableCell>
-                    <TableCell>{order.jumlah_total} pcs</TableCell>
-                    <TableCell className="font-medium">{formatRupiah(order.total_harga)}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={getStatusBadgeVariant(order.status_pesanan)}
-                        className="capitalize"
-                      >
-                        {order.status_pesanan}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{order.cs_id}</TableCell>
-                  </TableRow>
-                ))}
-                {filteredOrders.length === 0 && (
+                {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      Tidak ada pesanan yang ditemukan
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Memuat data...
                     </TableCell>
                   </TableRow>
+                ) : filteredItems.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Tidak ada order.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredItems.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-mono font-medium">{item.kode_barang || '-'}</TableCell>
+                      <TableCell>{item.konsumen || '-'}</TableCell>
+                      <TableCell>{item.model || '-'}</TableCell>
+                      <TableCell>{item.jumlah_pesanan || 0}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant((item.status || '').toLowerCase())}>
+                          {item.status || '-'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{item.payment_status || '-'}</TableCell>
+                      <TableCell className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(item)}>
+                          Detail
+                        </Button>
+                        {canManageOrders && (
+                          <Select
+                            onValueChange={(value) => {
+                              if (!value) return;
+                              void updateOrderStatus(item.id, value);
+                            }}
+                            defaultValue={item.status || 'Proses'}
+                          >
+                            <SelectTrigger className="h-8 w-[130px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUS_OPTIONS.map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  {status}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
@@ -225,227 +365,166 @@ export default function CSDashboardPage() {
         </Card>
       </div>
 
-      {/* Order Detail Modal */}
-      {selectedOrder && (
-        <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Detail Pesanan {selectedOrder.invoice}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Konsumen</Label>
-                  <p className="font-medium">{selectedOrder.konsumen?.nama || '-'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Kategori</Label>
-                  <p className="font-medium capitalize">{selectedOrder.kategori}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Model</Label>
-                  <p className="font-medium">{selectedOrder.model}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Jumlah</Label>
-                  <p className="font-medium">{selectedOrder.jumlah_total} pcs</p>
-                </div>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Status</Label>
-                <div className="mt-1">
-                  <Badge variant={getStatusBadgeVariant(selectedOrder.status_pesanan)} className="capitalize">
-                    {selectedOrder.status_pesanan}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedOrder(null)}>
-                Tutup
-              </Button>
-              <Button disabled={!canManageOrders}>Update Status</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* New Order Form Modal */}
-      <Dialog open={isFormOpen} onOpenChange={(open) => canManageOrders && setIsFormOpen(open)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="max-w-3xl max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Form Pesanan Baru</DialogTitle>
+            <DialogDescription>
+              Bisa input manual atau scan foto lembar kerja untuk auto-fill OCR.
+            </DialogDescription>
           </DialogHeader>
-          <form className="space-y-6">
-            {/* Basic Info */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+
+          <div className="space-y-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void handleOcrFile(file);
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={ocrLoading}
+            >
+              {ocrLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
+              {ocrLoading ? 'Memproses OCR...' : 'Scan Foto (OCR)'}
+            </Button>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Kode Barang *</Label>
+                <Input value={form.kode_barang} onChange={(e) => setForm((p) => ({ ...p, kode_barang: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
                 <Label>Konsumen *</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih konsumen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {konsumenData.map((k) => (
-                      <SelectItem key={k.id} value={k.id}>
-                        {k.nama} ({k.kode_barang})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input value={form.konsumen} onChange={(e) => setForm((p) => ({ ...p, konsumen: e.target.value }))} />
               </div>
-              <div className="space-y-2">
-                <Label>Kategori *</Label>
-                <Select defaultValue="kemeja">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {KATEGORI_OPTIONS.map((k) => (
-                      <SelectItem key={k.value} value={k.value}>
-                        {k.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-1">
+                <Label>CS</Label>
+                <Input value={form.cs} onChange={(e) => setForm((p) => ({ ...p, cs: e.target.value }))} />
               </div>
-              <div className="space-y-2">
-                <Label>CS *</Label>
-                <Input placeholder="Nama CS" defaultValue="Siti" />
+              <div className="space-y-1">
+                <Label>Nama Penjahit</Label>
+                <Input value={form.nama_penjahit} onChange={(e) => setForm((p) => ({ ...p, nama_penjahit: e.target.value }))} />
               </div>
-              <div className="space-y-2">
-                <Label>Affiliate (Opsional)</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih affiliate" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Tidak ada</SelectItem>
-                    {affiliateData.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.nama}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-1">
+                <Label>Model</Label>
+                <Input value={form.model} onChange={(e) => setForm((p) => ({ ...p, model: e.target.value }))} />
               </div>
-              <div className="space-y-2">
-                <Label>Tanggal Order *</Label>
-                <Input type="date" defaultValue={new Date().toISOString().split('T')[0]} />
+              <div className="space-y-1">
+                <Label>Model Detail</Label>
+                <Input value={form.model_detail} onChange={(e) => setForm((p) => ({ ...p, model_detail: e.target.value }))} />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
+                <Label>Warna</Label>
+                <Input value={form.warna} onChange={(e) => setForm((p) => ({ ...p, warna: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Jumlah Pesanan</Label>
+                <Input
+                  type="number"
+                  value={form.jumlah_pesanan}
+                  onChange={(e) => setForm((p) => ({ ...p, jumlah_pesanan: Number(e.target.value || 0) }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Tanggal Order</Label>
+                <Input value={form.tanggal_order} onChange={(e) => setForm((p) => ({ ...p, tanggal_order: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
                 <Label>Target Selesai</Label>
-                <Input type="date" />
+                <Input
+                  value={form.tanggal_target_selesai}
+                  onChange={(e) => setForm((p) => ({ ...p, tanggal_target_selesai: e.target.value }))}
+                />
               </div>
-            </div>
-
-            {/* Product Details */}
-            <div className="space-y-4">
-              <h3 className="font-medium">Detail Produk</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Model</Label>
-                  <Input placeholder="Contoh: Brad V2" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tipe Lengan</Label>
-                  <Select defaultValue="panjang">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIPE_LENGAN_OPTIONS.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>
-                          {t.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Potongan</Label>
-                  <Select defaultValue="pria">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {POTONGAN_OPTIONS.map((p) => (
-                        <SelectItem key={p.value} value={p.value}>
-                          {p.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Bentuk Bawah</Label>
-                  <Input placeholder="Contoh: Regular fit" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Detail Saku</Label>
-                <Textarea placeholder="Deskripsikan detail saku..." />
-              </div>
-            </div>
-
-            {/* Size Chart */}
-            <div className="space-y-4">
-              <h3 className="font-medium">Tabel Ukuran & Jumlah</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {/* Laki-Laki */}
-                <div className="border rounded-lg p-4">
-                  <h4 className="font-medium mb-3 text-blue-600">Laki-Laki</h4>
-                  <div className="grid grid-cols-4 gap-2">
-                    {SIZE_OPTIONS.map((size) => (
-                      <div key={size} className="space-y-1">
-                        <Label className="text-xs">{size}</Label>
-                        <Input type="number" min="0" defaultValue="0" className="h-8" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {/* Perempuan */}
-                <div className="border rounded-lg p-4">
-                  <h4 className="font-medium mb-3 text-pink-600">Perempuan</h4>
-                  <div className="grid grid-cols-4 gap-2">
-                    {SIZE_OPTIONS.map((size) => (
-                      <div key={size} className="space-y-1">
-                        <Label className="text-xs">{size}</Label>
-                        <Input type="number" min="0" defaultValue="0" className="h-8" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Total */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Total Harga</Label>
-                <Input type="number" placeholder="0" />
-              </div>
-              <div className="space-y-2">
-                <Label>Status Pembayaran</Label>
-                <Select defaultValue="dp">
+              <div className="space-y-1">
+                <Label>Status</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setForm((p) => ({ ...p, status: value }));
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="belum_bayar">Belum Bayar</SelectItem>
-                    <SelectItem value="dp">DP</SelectItem>
-                    <SelectItem value="lunas">Lunas</SelectItem>
+                    {STATUS_OPTIONS.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Status Pembayaran</Label>
+                <Select
+                  value={form.payment_status}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setForm((p) => ({ ...p, payment_status: value }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_OPTIONS.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-          </form>
+
+            <div className="space-y-1">
+              <Label>Deskripsi Pekerjaan</Label>
+              <Textarea
+                value={form.deskripsi_pekerjaan}
+                onChange={(e) => setForm((p) => ({ ...p, deskripsi_pekerjaan: e.target.value }))}
+              />
+            </div>
+          </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsFormOpen(false)}>
               Batal
             </Button>
-            <Button disabled={!canManageOrders}>Simpan Pesanan</Button>
+            <Button onClick={submitOrder} disabled={!canManageOrders || saving}>
+              {saving ? 'Menyimpan...' : 'Simpan Pesanan'}
+            </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detail Pesanan</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-2 text-sm">
+              <p><span className="text-muted-foreground">Kode:</span> {selectedOrder.kode_barang || '-'}</p>
+              <p><span className="text-muted-foreground">Konsumen:</span> {selectedOrder.konsumen || '-'}</p>
+              <p><span className="text-muted-foreground">CS:</span> {selectedOrder.cs || '-'}</p>
+              <p><span className="text-muted-foreground">Penjahit:</span> {selectedOrder.nama_penjahit || '-'}</p>
+              <p><span className="text-muted-foreground">Model:</span> {selectedOrder.model || '-'}</p>
+              <p><span className="text-muted-foreground">Qty:</span> {selectedOrder.jumlah_pesanan || 0}</p>
+              <p><span className="text-muted-foreground">Status:</span> {selectedOrder.status || '-'}</p>
+              <p><span className="text-muted-foreground">Deskripsi:</span> {selectedOrder.deskripsi_pekerjaan || '-'}</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
