@@ -1,46 +1,29 @@
 import { cache } from 'react';
-import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
 import { can, DEFAULT_ROLE } from '@/lib/auth/permissions';
-import type { AppRole, AuthUserContext, PermissionKey, UserRoleRow } from '@/types/auth';
-
-function toAppRole(role: string | null | undefined): AppRole {
-  if (role === 'admin' || role === 'staff' || role === 'cs' || role === 'penjahit') {
-    return role;
-  }
-  return DEFAULT_ROLE;
-}
+import { EMAIL_COOKIE, NAME_COOKIE, ROLE_COOKIE, SESSION_COOKIE, normalizeRole } from '@/lib/auth/session';
+import type { AppRole, AuthUserContext, PermissionKey } from '@/types/auth';
 
 export const getCurrentUserContext = cache(async (): Promise<AuthUserContext | null> => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
+  const cookieStore = await cookies();
+  const hasSession = cookieStore.get(SESSION_COOKIE)?.value === '1';
+  const email = cookieStore.get(EMAIL_COOKIE)?.value || '';
+  if (!hasSession || !email) {
     return null;
   }
 
-  const { data: roleRow } = await supabase
-    .from('user_roles')
-    .select('user_id, role, display_name, is_active')
-    .eq('user_id', user.id)
-    .maybeSingle<UserRoleRow>();
-
-  const resolvedRole = toAppRole(roleRow?.role);
+  const role = normalizeRole(cookieStore.get(ROLE_COOKIE)?.value || DEFAULT_ROLE);
   const displayName =
-    roleRow?.display_name ||
-    user.user_metadata?.full_name ||
-    user.user_metadata?.display_name ||
-    user.email ||
+    cookieStore.get(NAME_COOKIE)?.value ||
+    email.split('@')[0] ||
     'User';
 
   return {
-    userId: user.id,
-    email: user.email || '',
+    userId: email,
+    email,
     displayName,
-    role: resolvedRole,
-    isActive: roleRow?.is_active ?? true,
+    role,
+    isActive: true,
   };
 });
 

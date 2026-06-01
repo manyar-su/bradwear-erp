@@ -16,8 +16,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { EMAIL_COOKIE, NAME_COOKIE, ROLE_COOKIE, SESSION_COOKIE } from '@/lib/auth/session';
 
 interface HeaderProps {
   title: string;
@@ -39,8 +39,11 @@ export function Header({ title, breadcrumbs }: HeaderProps) {
   const handleLogout = async () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    const cookiesToClear = [SESSION_COOKIE, EMAIL_COOKIE, NAME_COOKIE, ROLE_COOKIE];
+    const expires = 'Max-Age=0; Path=/; SameSite=Lax';
+    cookiesToClear.forEach((key) => {
+      document.cookie = `${key}=; ${expires}`;
+    });
     router.replace('/login');
     router.refresh();
   };

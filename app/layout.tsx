@@ -16,8 +16,8 @@ const ubuntuMono = Ubuntu({
 });
 
 export const metadata: Metadata = {
-  title: "Bradwear Dashboard - ERP Sistem Manajemen Garmen",
-  description: "Sistem ERP untuk manajemen produksi garmen - Bradwear Dashboard",
+  title: "Bradwear Dashboard",
+  description: "Bradwear Dashboard untuk manajemen produksi garmen",
   icons: {
     icon: "/brand/logo-bradwear.png",
     apple: "/brand/logo-bradwear.png",

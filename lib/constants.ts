@@ -134,6 +134,6 @@ export const CHART_COLORS = {
 // Brand info
 export const BRAND_INFO = {
   name: 'Bradwear',
-  tagline: 'Dashboard ERP',
+  tagline: 'Dashboard',
   version: '1.0.0',
 } as const;

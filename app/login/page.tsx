@@ -7,26 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { createClient } from '@/lib/supabase/client';
+import {
+  EMAIL_COOKIE,
+  INTERNAL_DOMAIN,
+  NAME_COOKIE,
+  ROLE_COOKIE,
+  SESSION_COOKIE,
+  isInternalEmail,
+  normalizeInternalEmail,
+} from '@/lib/auth/session';
 
 type AuthMode = 'login' | 'register';
 type SignupRole = 'staff' | 'cs' | 'penjahit';
 
-const INTERNAL_DOMAIN = '@bradwear.com';
-const SHORT_INTERNAL_DOMAIN = '@bradwear';
-
-function normalizeInternalEmail(value: string) {
-  const trimmed = value.trim().toLowerCase();
-  if (!trimmed) return '';
-  if (!trimmed.includes('@')) return `${trimmed}${INTERNAL_DOMAIN}`;
-  if (trimmed.endsWith(SHORT_INTERNAL_DOMAIN)) return `${trimmed}.com`;
-  return trimmed;
-}
-
 export default function LoginPage() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [signupRole, setSignupRole] = useState<SignupRole>('penjahit');
   const [loading, setLoading] = useState(false);
@@ -49,7 +45,16 @@ export default function LoginPage() {
   };
 
   const validateInternalEmail = (value: string) => {
-    return value.toLowerCase().endsWith(INTERNAL_DOMAIN);
+    return isInternalEmail(value);
+  };
+
+  const persistLocalSession = (payload: { email: string; displayName: string; role: SignupRole }) => {
+    const maxAge = 60 * 60 * 24 * 14;
+    const base = `Path=/; Max-Age=${maxAge}; SameSite=Lax`;
+    document.cookie = `${SESSION_COOKIE}=1; ${base}`;
+    document.cookie = `${EMAIL_COOKIE}=${encodeURIComponent(payload.email)}; ${base}`;
+    document.cookie = `${NAME_COOKIE}=${encodeURIComponent(payload.displayName)}; ${base}`;
+    document.cookie = `${ROLE_COOKIE}=${payload.role}; ${base}`;
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -57,8 +62,8 @@ export default function LoginPage() {
     resetFeedback();
 
     const normalizedEmail = normalizeInternalEmail(email);
-    if (!normalizedEmail || !password) {
-      setError('Email dan password wajib diisi.');
+    if (!normalizedEmail) {
+      setError('Email wajib diisi.');
       return;
     }
 
@@ -69,52 +74,32 @@ export default function LoginPage() {
 
     setEmail(normalizedEmail);
     setLoading(true);
-    const supabase = createClient();
 
     if (mode === 'login') {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      persistLocalSession({
         email: normalizedEmail,
-        password,
+        displayName: normalizedEmail.split('@')[0],
+        role: 'penjahit',
       });
-
-      if (signInError) {
-        setError(signInError.message);
-        setLoading(false);
-        return;
-      }
-
       router.replace(getNextPath());
       router.refresh();
       return;
     }
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    persistLocalSession({
       email: normalizedEmail,
-      password,
-      options: {
-        data: {
-          display_name: displayName.trim() || normalizedEmail.split('@')[0],
-          full_name: displayName.trim() || normalizedEmail.split('@')[0],
-          role: signupRole,
-        },
-      },
+      displayName: displayName.trim() || normalizedEmail.split('@')[0],
+      role: signupRole,
     });
-
-    if (signUpError) {
-      setError(signUpError.message);
-      setLoading(false);
-      return;
-    }
-
-    setMessage('Registrasi berhasil. Jika konfirmasi email aktif, cek inbox terlebih dulu.');
-    setLoading(false);
+    router.replace(getNextPath());
+    router.refresh();
   };
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-3">
-          <CardTitle className="text-2xl font-bold text-center">Bradwear ERP</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Bradwear Dashboard</CardTitle>
           <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
             <button
               type="button"
@@ -182,21 +167,15 @@ export default function LoginPage() {
                 autoComplete="email"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="********"
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              />
-            </div>
 
             {mode === 'register' && (
               <p className="text-xs text-muted-foreground">
-                Email akan disimpan ke Supabase Auth. Gunakan domain internal <span className="font-medium">{INTERNAL_DOMAIN}</span>.
+                Gunakan email internal <span className="font-medium">{INTERNAL_DOMAIN}</span> untuk akses dashboard.
+              </p>
+            )}
+            {mode === 'login' && (
+              <p className="text-xs text-muted-foreground">
+                Login tanpa otentikasi email eksternal. Email internal hanya sebagai identitas akses.
               </p>
             )}
 

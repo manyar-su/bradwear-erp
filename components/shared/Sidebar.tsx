@@ -96,7 +96,7 @@ export function Sidebar() {
             </div>
             <div>
               <h1 className="font-bold text-lg leading-tight">Bradwear</h1>
-              <p className="text-xs text-slate-300">Dashboard ERP</p>
+              <p className="text-xs text-slate-300">Dashboard</p>
             </div>
           </div>
         )}
