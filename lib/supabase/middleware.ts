@@ -3,8 +3,17 @@ import { SESSION_COOKIE } from '@/lib/auth/session';
 
 export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isApiPath = pathname.startsWith('/api');
   const isLoginPage = pathname === '/login';
   const hasSession = request.cookies.get(SESSION_COOKIE)?.value === '1';
+
+  if (isApiPath) {
+    return NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    });
+  }
 
   if (!hasSession && !isLoginPage) {
     const loginUrl = request.nextUrl.clone();
