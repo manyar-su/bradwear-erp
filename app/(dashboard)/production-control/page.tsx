@@ -417,7 +417,7 @@ export default function ProductionControlPage() {
 
         <Dialog open={Boolean(selectedOrder)} onOpenChange={(open) => !open && setSelectedOrder(null)}>
           <DialogContent
-            className="max-w-5xl max-h-[90vh] overflow-y-auto"
+            className="w-[96vw] max-w-[1200px] max-h-[92vh] overflow-y-auto p-4 md:p-6"
             overlayClassName="supports-backdrop-filter:backdrop-blur-none bg-black/20"
           >
             <DialogHeader>
@@ -427,9 +427,9 @@ export default function ProductionControlPage() {
             </DialogHeader>
 
             {selectedOrder && (
-              <div className="space-y-6 text-sm">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
+              <div className="space-y-5 text-sm">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:gap-4">
+                  <Card className="md:col-span-4">
                     <CardContent className="p-4 space-y-2">
                       <p><span className="text-muted-foreground">Nama Penjahit:</span> {selectedOrder.nama_penjahit || '-'}</p>
                       <p><span className="text-muted-foreground">Nama Konsumen:</span> {selectedOrder.konsumen || '-'}</p>
@@ -438,14 +438,14 @@ export default function ProductionControlPage() {
                       <p><span className="text-muted-foreground">PIC Konsumen:</span> {selectedOrder.konsumen_master?.pic_name || '-'}</p>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="md:col-span-4">
                     <CardContent className="p-4 space-y-2">
                       <p><span className="text-muted-foreground">Model Kerjaan:</span> {selectedOrder.model || '-'}</p>
                       <p><span className="text-muted-foreground">Detail Model:</span> {selectedOrder.model_detail || '-'}</p>
                       <p><span className="text-muted-foreground">Jumlah:</span> {(selectedOrder.jumlah_pesanan || 0).toLocaleString('id-ID')} pcs</p>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="md:col-span-4">
                     <CardContent className="p-4 space-y-2">
                       <p><span className="text-muted-foreground">Status:</span> <Badge className="ml-1" variant={getStatusBadgeVariant(selectedOrder.normalized_status)}>{selectedOrder.normalized_status}</Badge></p>
                       <p><span className="text-muted-foreground">Pembayaran:</span> {selectedOrder.normalized_payment.replace('_', ' ')}</p>

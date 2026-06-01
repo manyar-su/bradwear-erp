@@ -100,57 +100,63 @@ export default function AffiliateSalesPage() {
         breadcrumbs={[{ label: 'Bradwear', href: '/dashboard' }, { label: 'Affiliate Sales' }]}
       />
 
-      <div className="p-6 space-y-6">
+      <div className="space-y-4 p-3 md:space-y-6 md:p-6">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-blue-100">
-                  <Users className="w-6 h-6 text-blue-600" />
+            <CardContent className="flex min-h-[104px] items-center p-3 md:min-h-[120px] md:p-5">
+              <div className="flex w-full items-center gap-3">
+                <div className="rounded-xl bg-blue-100 p-2.5 md:p-3">
+                  <Users className="h-5 w-5 text-blue-600 md:h-6 md:w-6" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Affiliate</p>
-                  <p className="text-2xl font-bold">{affiliateData.length}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground md:text-sm">Total Affiliate</p>
+                  <p className="text-lg font-bold leading-tight md:text-2xl">{affiliateData.length}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-green-100">
-                  <DollarSign className="w-6 h-6 text-green-600" />
+            <CardContent className="flex min-h-[104px] items-center p-3 md:min-h-[120px] md:p-5">
+              <div className="flex w-full items-center gap-3">
+                <div className="rounded-xl bg-green-100 p-2.5 md:p-3">
+                  <DollarSign className="h-5 w-5 text-green-600 md:h-6 md:w-6" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Komisi</p>
-                  <p className="text-2xl font-bold text-primary">{formatRupiah(totalStats.totalCommission)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-amber-100">
-                  <Clock className="w-6 h-6 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Belum Cair</p>
-                  <p className="text-2xl font-bold">{formatRupiah(totalStats.pendingCommission + totalStats.approvedCommission)}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground md:text-sm">Total Komisi</p>
+                  <p className="truncate text-lg font-bold leading-tight text-primary md:text-2xl">
+                    {formatRupiah(totalStats.totalCommission)}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-purple-100">
-                  <CheckCircle className="w-6 h-6 text-purple-600" />
+            <CardContent className="flex min-h-[104px] items-center p-3 md:min-h-[120px] md:p-5">
+              <div className="flex w-full items-center gap-3">
+                <div className="rounded-xl bg-amber-100 p-2.5 md:p-3">
+                  <Clock className="h-5 w-5 text-amber-600 md:h-6 md:w-6" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Sudah Dibayar</p>
-                  <p className="text-2xl font-bold text-green-600">{formatRupiah(totalStats.paidCommission)}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground md:text-sm">Belum Cair</p>
+                  <p className="truncate text-lg font-bold leading-tight md:text-2xl">
+                    {formatRupiah(totalStats.pendingCommission + totalStats.approvedCommission)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex min-h-[104px] items-center p-3 md:min-h-[120px] md:p-5">
+              <div className="flex w-full items-center gap-3">
+                <div className="rounded-xl bg-purple-100 p-2.5 md:p-3">
+                  <CheckCircle className="h-5 w-5 text-purple-600 md:h-6 md:w-6" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground md:text-sm">Sudah Dibayar</p>
+                  <p className="truncate text-lg font-bold leading-tight text-green-600 md:text-2xl">
+                    {formatRupiah(totalStats.paidCommission)}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -234,7 +240,7 @@ export default function AffiliateSalesPage() {
             <CardTitle>Riwayat Komisi</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4 mb-4">
+            <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -245,7 +251,7 @@ export default function AffiliateSalesPage() {
                 />
               </div>
               <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value || 'all')}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-full md:w-[150px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>

@@ -85,6 +85,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const projectRef = process.env.SUPABASE_PROJECT_REF || 'unknown-project';
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase
@@ -222,7 +223,7 @@ export async function GET() {
     .slice(0, 8);
 
   return NextResponse.json({
-    source: 'Bradflow orders',
+    source: `Bradflow orders (${projectRef})`,
     stats,
     tailorWorkload,
     orders,

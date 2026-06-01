@@ -259,10 +259,10 @@ export function getSupabaseAdmin() {
   if (cachedAdminClient) return cachedAdminClient;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !serviceRole) {
-    throw new Error('Supabase service role env belum lengkap.');
+    throw new Error('Supabase env belum lengkap (url/key).');
   }
 
   cachedAdminClient = createClient<AppDatabase>(url, serviceRole, {
