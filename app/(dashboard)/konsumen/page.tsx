@@ -45,6 +45,11 @@ type KonsumenItem = {
   catatan: string | null;
   status: 'aktif' | 'nonaktif';
   created_by_email: string | null;
+  pic_name: string | null;
+  pic_phone: string | null;
+  pic_email: string | null;
+  assigned_cs: string | null;
+  updated_by_email: string | null;
   created_at: string;
   updated_at: string;
   total_order: number;
@@ -86,6 +91,10 @@ export default function KonsumenPage() {
     email: '',
     alamat: '',
     catatan: '',
+    pic_name: '',
+    pic_phone: '',
+    pic_email: '',
+    assigned_cs: '',
     status: 'aktif' as 'aktif' | 'nonaktif',
   });
 
@@ -132,6 +141,10 @@ export default function KonsumenPage() {
       email: '',
       alamat: '',
       catatan: '',
+      pic_name: '',
+      pic_phone: '',
+      pic_email: '',
+      assigned_cs: '',
       status: 'aktif',
     });
   };
@@ -415,6 +428,34 @@ export default function KonsumenPage() {
                   onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
                 />
               </div>
+              <div className="space-y-1">
+                <Label>PIC Name</Label>
+                <Input
+                  value={form.pic_name}
+                  onChange={(event) => setForm((prev) => ({ ...prev, pic_name: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>PIC Phone</Label>
+                <Input
+                  value={form.pic_phone}
+                  onChange={(event) => setForm((prev) => ({ ...prev, pic_phone: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>PIC Email</Label>
+                <Input
+                  value={form.pic_email}
+                  onChange={(event) => setForm((prev) => ({ ...prev, pic_email: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Assigned CS</Label>
+                <Input
+                  value={form.assigned_cs}
+                  onChange={(event) => setForm((prev) => ({ ...prev, assigned_cs: event.target.value }))}
+                />
+              </div>
             </div>
             <div className="space-y-1">
               <Label>Alamat</Label>
@@ -478,6 +519,15 @@ export default function KonsumenPage() {
               </p>
               <p>
                 <span className="text-muted-foreground">Alamat:</span> {selectedKonsumen.alamat || '-'}
+              </p>
+              <p>
+                <span className="text-muted-foreground">PIC:</span> {selectedKonsumen.pic_name || '-'}
+              </p>
+              <p>
+                <span className="text-muted-foreground">PIC Phone:</span> {selectedKonsumen.pic_phone || '-'}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Assigned CS:</span> {selectedKonsumen.assigned_cs || '-'}
               </p>
               <p>
                 <span className="text-muted-foreground">Catatan:</span> {selectedKonsumen.catatan || '-'}

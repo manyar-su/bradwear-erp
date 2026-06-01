@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getCurrentUserContext } from '@/lib/auth/server';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 type OrderRow = {
   id: string;
   kode_barang: string | null;
+  konsumen_id: string | null;
   nama_penjahit: string | null;
   model: string | null;
   model_detail: string | null;
@@ -78,41 +80,118 @@ function parseFlexibleDate(value: string | null | undefined) {
 }
 
 export async function GET() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !serviceRole) {
-    return NextResponse.json(
-      { error: 'Supabase env belum lengkap untuk Production Control' },
-      { status: 503 }
-    );
+  const user = await getCurrentUserContext();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const supabase = createClient(url, serviceRole, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id, kode_barang, nama_penjahit, model, model_detail, jumlah_pesanan, status, payment_status, priority, cs, konsumen, warna, saku_type, saku_color, size_details, deskripsi_pekerjaan, embroidery_status, embroidery_notes, completed_at, tanggal_order, tanggal_target_selesai, created_at, deleted_at'
+      'id, kode_barang, konsumen_id, nama_penjahit, model, model_detail, jumlah_pesanan, status, payment_status, priority, cs, konsumen, warna, saku_type, saku_color, size_details, deskripsi_pekerjaan, embroidery_status, embroidery_notes, completed_at, tanggal_order, tanggal_target_selesai, created_at, deleted_at'
     )
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
-    .limit(1000);
+    .limit(5000);
 
+  let orderRowsData = (data || null) as Array<Record<string, unknown>> | null;
   if (error) {
-    return NextResponse.json(
-      { error: `Gagal baca data Production Control: ${error.message}` },
-      { status: 500 }
-    );
+    if (!error.message.includes('column orders.konsumen_id does not exist')) {
+      return NextResponse.json(
+        { error: `Gagal baca data Production Control: ${error.message}` },
+        { status: 500 }
+      );
+    }
+    const { data: fallbackRows, error: fallbackErr } = await supabase
+      .from('orders')
+      .select(
+        'id, kode_barang, nama_penjahit, model, model_detail, jumlah_pesanan, status, payment_status, priority, cs, konsumen, warna, saku_type, saku_color, size_details, deskripsi_pekerjaan, embroidery_status, embroidery_notes, completed_at, tanggal_order, tanggal_target_selesai, created_at, deleted_at'
+      )
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(5000);
+    if (fallbackErr) {
+      return NextResponse.json(
+        { error: `Gagal baca data Production Control: ${fallbackErr.message}` },
+        { status: 500 }
+      );
+    }
+    orderRowsData = ((fallbackRows || []) as Array<Record<string, unknown>>).map((row) => ({
+      ...(row as Record<string, unknown>),
+      konsumen_id: null,
+    }));
   }
 
-  const orders = ((data || []) as OrderRow[]).map((row) => ({
+  const baseOrders = ((orderRowsData || []) as OrderRow[]).map((row) => ({
     ...row,
     normalized_status: normalizeStatus(row.status),
     normalized_payment: normalizePayment(row.payment_status),
   }));
+
+  const konsumenIds = Array.from(
+    new Set(baseOrders.map((row) => row.konsumen_id).filter((id): id is string => Boolean(id)))
+  );
+
+  const konsumenMap = new Map<
+    string,
+    {
+      id: string;
+      nama: string;
+      kode_barang: string;
+      telepon: string | null;
+      email: string | null;
+      pic_name: string | null;
+      pic_phone: string | null;
+      pic_email: string | null;
+      assigned_cs: string | null;
+    }
+  >();
+
+  if (konsumenIds.length > 0) {
+    const { data: konsumenData, error: konsumenErr } = await supabase
+      .from('konsumen')
+      .select('id, nama, kode_barang, telepon, email, pic_name, pic_phone, pic_email, assigned_cs')
+      .in('id', konsumenIds);
+    let rows = (konsumenData || null) as Array<Record<string, unknown>> | null;
+    if (konsumenErr && konsumenErr.message.includes('column konsumen.pic_name does not exist')) {
+      const { data: fallbackKonsumen } = await supabase
+        .from('konsumen')
+        .select('id, nama, kode_barang, telepon, email')
+        .in('id', konsumenIds);
+      rows = ((fallbackKonsumen || []) as Array<Record<string, unknown>>).map((row) => ({
+        ...(row as Record<string, unknown>),
+        pic_name: null,
+        pic_phone: null,
+        pic_email: null,
+        assigned_cs: null,
+      }));
+    }
+    (rows || []).forEach((row) => {
+      const item = row as {
+        id: string;
+        nama: string;
+        kode_barang: string;
+        telepon: string | null;
+        email: string | null;
+        pic_name: string | null;
+        pic_phone: string | null;
+        pic_email: string | null;
+        assigned_cs: string | null;
+      };
+      konsumenMap.set(item.id, item);
+    });
+  }
+
+  const orders = baseOrders.map((row) => {
+    const konsumenMaster = row.konsumen_id ? konsumenMap.get(row.konsumen_id) : null;
+    return {
+      ...row,
+      konsumen: konsumenMaster?.nama || row.konsumen,
+      konsumen_master: konsumenMaster || null,
+    };
+  });
 
   const today = new Date();
   const stats = {
@@ -146,6 +225,6 @@ export async function GET() {
     source: 'Bradflow orders',
     stats,
     tailorWorkload,
-    orders: orders.slice(0, 200),
+    orders,
   });
 }

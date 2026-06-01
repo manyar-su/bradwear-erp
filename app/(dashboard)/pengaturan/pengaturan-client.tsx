@@ -25,6 +25,16 @@ type ActionState = {
   message: string;
 };
 
+type TableSummary = {
+  table: string;
+  count: number;
+  error?: string;
+};
+
+type DatabaseSummary = {
+  tables: TableSummary[];
+};
+
 const INITIAL_STATE: ActionState = { ok: false, message: '' };
 
 function InlineSaveButton({ disabled }: { disabled: boolean }) {
@@ -35,7 +45,13 @@ function InlineSaveButton({ disabled }: { disabled: boolean }) {
   );
 }
 
-export function PengaturanClient({ rows }: { rows: UserProfileRow[] }) {
+export function PengaturanClient({
+  rows,
+  databaseSummary,
+}: {
+  rows: UserProfileRow[];
+  databaseSummary: DatabaseSummary;
+}) {
   const { can } = useAuth();
   const canManageSettings = can('settings.manage');
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
@@ -53,6 +69,27 @@ export function PengaturanClient({ rows }: { rows: UserProfileRow[] }) {
       />
 
       <div className="p-6 space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Ringkasan Database Supabase</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {databaseSummary.tables.map((item) => (
+                <div key={item.table} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs text-muted-foreground">{item.table}</p>
+                  <p className="text-xl font-bold">{item.count.toLocaleString('id-ID')}</p>
+                  {item.error ? (
+                    <p className="text-xs text-red-600 mt-1">{item.error}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">Data terbaca dari Supabase</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Manajemen User Profile & Role</CardTitle>
@@ -189,4 +226,3 @@ export function PengaturanClient({ rows }: { rows: UserProfileRow[] }) {
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Header } from '@/components/shared/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type ProfilePayload = {
   email: string;
@@ -19,6 +20,7 @@ type ProfilePayload = {
 };
 
 export default function ProfilPage() {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +29,12 @@ export default function ProfilPage() {
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [statusText, setStatusText] = useState('');
+
+  const initials = (() => {
+    const source = displayName || profile?.display_name || profile?.email || 'U';
+    const words = source.trim().split(/\s+/).slice(0, 2);
+    return words.map((word) => word[0]?.toUpperCase() || '').join('') || 'U';
+  })();
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +95,23 @@ export default function ProfilPage() {
     }
   };
 
+  const handleAvatarUpload = async (file: File) => {
+    setError(null);
+    setMessage(null);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('FileReader error'));
+        reader.readAsDataURL(file);
+      });
+      setAvatarUrl(dataUrl);
+      setMessage('Avatar berhasil dipilih. Klik "Simpan Profil" untuk menyimpan ke Supabase.');
+    } catch {
+      setError('Gagal membaca file avatar.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Header
@@ -130,6 +155,33 @@ export default function ProfilPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label>Preview Avatar</Label>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-16 w-16">
+                      {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName || profile?.email || 'avatar'} /> : null}
+                      <AvatarFallback className="text-base">{initials}</AvatarFallback>
+                    </Avatar>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) void handleAvatarUpload(file);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Upload Avatar
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
                   <Label>Avatar URL</Label>
                   <Input
                     value={avatarUrl}
@@ -169,4 +221,3 @@ export default function ProfilPage() {
     </div>
   );
 }
-

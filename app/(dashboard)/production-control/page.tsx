@@ -34,6 +34,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 type ProductionOrder = {
   id: string;
   kode_barang: string | null;
+  konsumen_id: string | null;
   nama_penjahit: string | null;
   model: string | null;
   model_detail: string | null;
@@ -55,6 +56,17 @@ type ProductionOrder = {
   tanggal_target_selesai: string | null;
   normalized_status: string;
   normalized_payment: string;
+  konsumen_master?: {
+    id: string;
+    nama: string;
+    kode_barang: string;
+    telepon: string | null;
+    email: string | null;
+    pic_name: string | null;
+    pic_phone: string | null;
+    pic_email: string | null;
+    assigned_cs: string | null;
+  } | null;
 };
 
 type SizeGroup = {
@@ -385,7 +397,9 @@ export default function ProductionControlPage() {
                     <CardContent className="p-4 space-y-2">
                       <p><span className="text-muted-foreground">Nama Penjahit:</span> {selectedOrder.nama_penjahit || '-'}</p>
                       <p><span className="text-muted-foreground">Nama Konsumen:</span> {selectedOrder.konsumen || '-'}</p>
+                      <p><span className="text-muted-foreground">Kontak Konsumen:</span> {selectedOrder.konsumen_master?.telepon || '-'}</p>
                       <p><span className="text-muted-foreground">Nama CS:</span> {selectedOrder.cs || '-'}</p>
+                      <p><span className="text-muted-foreground">PIC Konsumen:</span> {selectedOrder.konsumen_master?.pic_name || '-'}</p>
                     </CardContent>
                   </Card>
                   <Card>

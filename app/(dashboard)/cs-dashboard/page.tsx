@@ -38,6 +38,7 @@ import { getStatusBadgeVariant } from '@/lib/utils';
 type OrderItem = {
   id: string;
   kode_barang: string | null;
+  konsumen_id: string | null;
   nama_penjahit: string | null;
   model: string | null;
   model_detail: string | null;
@@ -50,6 +51,14 @@ type OrderItem = {
   tanggal_order: string | null;
   tanggal_target_selesai: string | null;
   deskripsi_pekerjaan: string | null;
+  konsumen_master?: {
+    id: string;
+    kode_barang: string;
+    nama: string;
+    telepon: string | null;
+    email: string | null;
+    assigned_cs: string | null;
+  } | null;
 };
 
 type OcrResponse = {
@@ -68,6 +77,15 @@ type OcrResponse = {
   };
 };
 
+type KonsumenOption = {
+  id: string;
+  kode_barang: string;
+  nama: string;
+  telepon: string | null;
+  email: string | null;
+  assigned_cs: string | null;
+};
+
 const STATUS_OPTIONS = ['Proses', 'Beres', 'Menunggu', 'Batal'] as const;
 const PAYMENT_OPTIONS = ['Belum Bayar', 'DP', 'Sudah Bayar'] as const;
 
@@ -76,9 +94,11 @@ export default function CSDashboardPage() {
   const canManageOrders = can('orders.manage');
 
   const [items, setItems] = useState<OrderItem[]>([]);
+  const [konsumenOptions, setKonsumenOptions] = useState<KonsumenOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [konsumenSearch, setKonsumenSearch] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
@@ -87,7 +107,7 @@ export default function CSDashboardPage() {
 
   const [form, setForm] = useState({
     kode_barang: '',
-    konsumen: '',
+    konsumen_id: '',
     cs: user?.displayName || '',
     nama_penjahit: '',
     model: '',
@@ -120,9 +140,20 @@ export default function CSDashboardPage() {
     }
   };
 
+  const loadKonsumenOptions = async () => {
+    try {
+      const response = await fetch('/api/konsumen', { cache: 'no-store' });
+      const data = (await response.json()) as { items?: KonsumenOption[] };
+      if (!response.ok) return;
+      setKonsumenOptions(data.items || []);
+    } catch {
+      // keep last loaded options
+    }
+  };
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadOrders();
+    void Promise.all([loadOrders(), loadKonsumenOptions()]);
   }, []);
 
   useEffect(() => {
@@ -146,7 +177,7 @@ export default function CSDashboardPage() {
   const resetForm = () => {
     setForm({
       kode_barang: '',
-      konsumen: '',
+      konsumen_id: '',
       cs: user?.displayName || '',
       nama_penjahit: '',
       model: '',
@@ -160,9 +191,43 @@ export default function CSDashboardPage() {
       deskripsi_pekerjaan: '',
       size_details: [],
     });
+    setKonsumenSearch('');
+  };
+
+  const filteredKonsumenOptions = useMemo(() => {
+    const query = konsumenSearch.trim().toLowerCase();
+    if (!query) return konsumenOptions.slice(0, 100);
+    return konsumenOptions
+      .filter((item) =>
+        item.nama.toLowerCase().includes(query) ||
+        item.kode_barang.toLowerCase().includes(query) ||
+        (item.telepon || '').toLowerCase().includes(query)
+      )
+      .slice(0, 100);
+  }, [konsumenOptions, konsumenSearch]);
+
+  const selectedKonsumen = useMemo(() => {
+    return konsumenOptions.find((item) => item.id === form.konsumen_id) || null;
+  }, [konsumenOptions, form.konsumen_id]);
+
+  const applyKonsumenSelection = (konsumenId: string | null) => {
+    if (!konsumenId) return;
+    const selected = konsumenOptions.find((item) => item.id === konsumenId);
+    if (!selected) return;
+    setForm((prev) => ({
+      ...prev,
+      konsumen_id: selected.id,
+      kode_barang: prev.kode_barang || selected.kode_barang,
+      cs: prev.cs || selected.assigned_cs || '',
+    }));
+    setKonsumenSearch(selected.nama);
   };
 
   const submitOrder = async () => {
+    if (!form.konsumen_id) {
+      setError('Pilih konsumen dari master konsumen terlebih dahulu.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -231,10 +296,18 @@ export default function CSDashboardPage() {
         return;
       }
       const ocr = data.normalized;
+      const matchedKonsumen = konsumenOptions.find((item) => {
+        const lowerNama = (ocr.konsumen || '').trim().toLowerCase();
+        const lowerKode = (ocr.kodeBarang || '').trim().toLowerCase();
+        return (
+          item.nama.trim().toLowerCase() === lowerNama ||
+          item.kode_barang.trim().toLowerCase() === lowerKode
+        );
+      });
       setForm((prev) => ({
         ...prev,
         kode_barang: ocr.kodeBarang || prev.kode_barang,
-        konsumen: ocr.konsumen || prev.konsumen,
+        konsumen_id: matchedKonsumen?.id || prev.konsumen_id,
         cs: ocr.cs || prev.cs,
         model: ocr.model || prev.model,
         warna: ocr.warna || prev.warna,
@@ -245,6 +318,11 @@ export default function CSDashboardPage() {
         deskripsi_pekerjaan: ocr.deskripsiPekerjaan || prev.deskripsi_pekerjaan,
         size_details: ocr.sizeDetails || prev.size_details,
       }));
+      if (matchedKonsumen) {
+        setKonsumenSearch(matchedKonsumen.nama);
+      } else if (ocr.konsumen) {
+        setKonsumenSearch(ocr.konsumen);
+      }
     } catch {
       setError('Gagal memproses OCR.');
     } finally {
@@ -402,8 +480,38 @@ export default function CSDashboardPage() {
                 <Input value={form.kode_barang} onChange={(e) => setForm((p) => ({ ...p, kode_barang: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label>Konsumen *</Label>
-                <Input value={form.konsumen} onChange={(e) => setForm((p) => ({ ...p, konsumen: e.target.value }))} />
+                <Label>Cari Konsumen</Label>
+                <Input
+                  value={konsumenSearch}
+                  onChange={(e) => setKonsumenSearch(e.target.value)}
+                  placeholder="Ketik nama / kode / telepon"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Pilih Konsumen Master *</Label>
+                <Select value={form.konsumen_id} onValueChange={applyKonsumenSelection}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih konsumen dari database" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredKonsumenOptions.length === 0 ? (
+                      <SelectItem value="__empty" disabled>
+                        Konsumen tidak ditemukan
+                      </SelectItem>
+                    ) : (
+                      filteredKonsumenOptions.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.nama} - {item.kode_barang}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                {selectedKonsumen && (
+                  <p className="text-xs text-muted-foreground">
+                    Kontak: {selectedKonsumen.telepon || '-'} | CS PIC: {selectedKonsumen.assigned_cs || '-'}
+                  </p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label>CS</Label>

@@ -15,6 +15,8 @@ import {
   ChevronRight,
   Wallet,
   Settings,
+  UserCircle2,
+  MessagesSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -47,6 +49,11 @@ const navItems = [
     icon: Factory,
   },
   {
+    title: 'Forum Diskusi',
+    href: '/forum-diskusi',
+    icon: MessagesSquare,
+  },
+  {
     title: 'Belanja Bahan',
     href: '/belanja-bahan',
     icon: Package,
@@ -65,6 +72,11 @@ const navItems = [
     title: 'Pengaturan',
     href: '/pengaturan',
     icon: Settings,
+  },
+  {
+    title: 'Profil',
+    href: '/profil',
+    icon: UserCircle2,
   },
 ];
 

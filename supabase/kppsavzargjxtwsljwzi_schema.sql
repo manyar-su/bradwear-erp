@@ -256,6 +256,12 @@ create table if not exists public.konsumen (
   updated_at timestamptz not null default now()
 );
 
+alter table public.konsumen add column if not exists pic_name text;
+alter table public.konsumen add column if not exists pic_phone text;
+alter table public.konsumen add column if not exists pic_email text;
+alter table public.konsumen add column if not exists assigned_cs text;
+alter table public.konsumen add column if not exists updated_by_email text;
+
 create or replace function public.set_updated_at_konsumen()
 returns trigger
 language plpgsql
@@ -327,9 +333,26 @@ alter table public.integration_sync_logs enable row level security;
 -- =========================================================
 alter table public.orders add column if not exists integration_source text;
 alter table public.orders add column if not exists external_id text;
+alter table public.orders add column if not exists konsumen_id uuid;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'orders_konsumen_id_fkey'
+  ) then
+    alter table public.orders
+      add constraint orders_konsumen_id_fkey
+      foreign key (konsumen_id)
+      references public.konsumen(id)
+      on delete set null;
+  end if;
+end $$;
 
 create index if not exists idx_orders_external_id on public.orders (external_id);
 create index if not exists idx_orders_integration_source on public.orders (integration_source);
+create index if not exists idx_orders_konsumen_id on public.orders (konsumen_id);
 
 -- seed integration source Bradflow
 insert into public.integration_sources (source_key, source_name, is_active, config)
@@ -339,3 +362,48 @@ set source_name = excluded.source_name,
     is_active = excluded.is_active,
     config = excluded.config,
     updated_at = now();
+
+-- =========================================================
+-- 8) Forum diskusi internal
+-- =========================================================
+create table if not exists public.forum_messages (
+  id uuid primary key default gen_random_uuid(),
+  message_text text,
+  author_email text not null,
+  author_name text,
+  author_role text,
+  kode_barang_tag text,
+  emoji_reactions jsonb not null default '{}'::jsonb,
+  attachment_url text,
+  attachment_name text,
+  attachment_type text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+create or replace function public.set_updated_at_forum_messages()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_forum_messages_updated_at on public.forum_messages;
+create trigger trg_forum_messages_updated_at
+before update on public.forum_messages
+for each row
+execute function public.set_updated_at_forum_messages();
+
+create index if not exists idx_forum_messages_created_at on public.forum_messages (created_at desc);
+create index if not exists idx_forum_messages_kode_barang_tag on public.forum_messages (kode_barang_tag);
+
+alter table public.forum_messages enable row level security;
+
+-- storage bucket untuk upload forum (public URL agar gampang diakses dashboard)
+insert into storage.buckets (id, name, public)
+values ('forum-uploads', 'forum-uploads', true)
+on conflict (id) do nothing;

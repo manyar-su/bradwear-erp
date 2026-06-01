@@ -48,6 +48,11 @@ type AppDatabase = {
           catatan: string | null;
           status: string;
           created_by_email: string | null;
+          pic_name: string | null;
+          pic_phone: string | null;
+          pic_email: string | null;
+          assigned_cs: string | null;
+          updated_by_email: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -61,6 +66,11 @@ type AppDatabase = {
           catatan: string | null;
           status: string;
           created_by_email: string | null;
+          pic_name: string | null;
+          pic_phone: string | null;
+          pic_email: string | null;
+          assigned_cs: string | null;
+          updated_by_email: string | null;
           created_at: string;
           updated_at: string;
         }>;
@@ -73,6 +83,11 @@ type AppDatabase = {
           catatan: string | null;
           status: string;
           created_by_email: string | null;
+          pic_name: string | null;
+          pic_phone: string | null;
+          pic_email: string | null;
+          assigned_cs: string | null;
+          updated_by_email: string | null;
           updated_at: string;
         }>;
         Relationships: [];
@@ -81,6 +96,7 @@ type AppDatabase = {
         Row: {
           id: string;
           kode_barang: string | null;
+          konsumen_id: string | null;
           nama_penjahit: string | null;
           model: string | null;
           model_detail: string | null;
@@ -91,6 +107,11 @@ type AppDatabase = {
           cs: string | null;
           konsumen: string | null;
           warna: string | null;
+          saku_type: string | null;
+          saku_color: string | null;
+          embroidery_status: string | null;
+          embroidery_notes: string | null;
+          completed_at: string | null;
           tanggal_order: string | null;
           tanggal_target_selesai: string | null;
           deskripsi_pekerjaan: string | null;
@@ -103,6 +124,7 @@ type AppDatabase = {
         };
         Insert: Partial<{
           kode_barang: string;
+          konsumen_id: string | null;
           nama_penjahit: string | null;
           model: string | null;
           model_detail: string | null;
@@ -113,6 +135,11 @@ type AppDatabase = {
           cs: string | null;
           konsumen: string | null;
           warna: string | null;
+          saku_type: string | null;
+          saku_color: string | null;
+          embroidery_status: string | null;
+          embroidery_notes: string | null;
+          completed_at: string | null;
           tanggal_order: string | null;
           tanggal_target_selesai: string | null;
           deskripsi_pekerjaan: string | null;
@@ -123,6 +150,13 @@ type AppDatabase = {
         Update: Partial<{
           status: string;
           payment_status: string;
+          konsumen_id: string | null;
+          konsumen: string | null;
+          saku_type: string | null;
+          saku_color: string | null;
+          embroidery_status: string | null;
+          embroidery_notes: string | null;
+          completed_at: string | null;
           updated_at: string;
         }>;
         Relationships: [];
@@ -170,6 +204,49 @@ type AppDatabase = {
         };
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      forum_messages: {
+        Row: {
+          id: string;
+          message_text: string | null;
+          author_email: string;
+          author_name: string | null;
+          author_role: string | null;
+          kode_barang_tag: string | null;
+          emoji_reactions: Record<string, unknown>;
+          attachment_url: string | null;
+          attachment_name: string | null;
+          attachment_type: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: Partial<{
+          id: string;
+          message_text: string | null;
+          author_email: string;
+          author_name: string | null;
+          author_role: string | null;
+          kode_barang_tag: string | null;
+          emoji_reactions: Record<string, unknown>;
+          attachment_url: string | null;
+          attachment_name: string | null;
+          attachment_type: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        }>;
+        Update: Partial<{
+          message_text: string | null;
+          kode_barang_tag: string | null;
+          emoji_reactions: Record<string, unknown>;
+          attachment_url: string | null;
+          attachment_name: string | null;
+          attachment_type: string | null;
+          updated_at: string;
+          deleted_at: string | null;
+        }>;
         Relationships: [];
       };
     };
