@@ -18,10 +18,7 @@ export default async function DashboardLayout({
     <AuthProvider user={user}>
       <div className="flex min-h-screen">
         <Sidebar />
-        <main
-          className="flex-1 transition-all duration-300"
-          style={{ marginLeft: '260px' }}
-        >
+        <main className="flex-1 transition-all duration-300 md:ml-[260px]">
           {children}
         </main>
       </div>

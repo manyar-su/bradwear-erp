@@ -3,13 +3,15 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, Search, User, LogOut } from 'lucide-react';
+import { Bell, Search, User, LogOut, Menu } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { EMAIL_COOKIE, NAME_COOKIE, ROLE_COOKIE, SESSION_COOKIE } from '@/lib/auth/session';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { navItems } from './nav-items';
 
 interface HeaderProps {
   title: string;
@@ -68,11 +70,54 @@ export function Header({ title, breadcrumbs }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
-      <div className="flex items-center justify-between px-6 py-4">
+      <div className="flex items-center justify-between px-3 py-3 md:px-6 md:py-4">
         {/* Left side - Breadcrumb & Title */}
-        <div>
+        <div className="flex items-start gap-2">
+          <Sheet>
+            <SheetTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="mt-0.5 h-8 w-8 md:hidden"
+                  aria-label="Buka menu"
+                />
+              }
+            >
+              <Menu className="h-4 w-4" />
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[86%] max-w-xs border-r-0 bg-[#1E3A5F] p-0 text-white">
+              <div className="border-b border-[#2D5A87] px-4 py-4">
+                <SheetTitle className="text-white">Bradwear Menu</SheetTitle>
+              </div>
+              <nav className="px-3 py-3">
+                <ul className="space-y-1">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                            isActive
+                              ? 'bg-[#F59E0B] text-[#1E3A5F]'
+                              : 'text-white/85 hover:bg-[#2D5A87] hover:text-white'
+                          }`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            </SheetContent>
+          </Sheet>
+          <div>
           {breadcrumbs && breadcrumbs.length > 0 && (
-            <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+            <nav className="mb-1 hidden items-center gap-2 text-xs text-muted-foreground md:flex md:text-sm">
               {breadcrumbs.map((crumb, index) => (
                 <span key={index} className="flex items-center gap-2">
                   {index > 0 && <span>/</span>}
@@ -87,24 +132,28 @@ export function Header({ title, breadcrumbs }: HeaderProps) {
               ))}
             </nav>
           )}
-          <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+          <h1 className="text-lg font-bold text-foreground md:text-2xl">{title}</h1>
+          </div>
         </div>
 
         {/* Right side - Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           {/* Search */}
-          <div className="relative hidden md:block">
+          <div className="relative hidden lg:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Cari..."
               className="pl-10 w-[280px] bg-slate-50 border-slate-200 focus:bg-white"
             />
           </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8 lg:hidden">
+            <Search className="h-4 w-4 text-slate-600" />
+          </Button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="w-5 h-5 text-slate-600" />
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px] bg-red-500">
+          <Button variant="ghost" size="icon" className="relative h-8 w-8 md:h-10 md:w-10">
+            <Bell className="w-4 h-4 text-slate-600 md:w-5 md:h-5" />
+            <Badge className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center bg-red-500 p-0 text-[9px] md:h-5 md:w-5 md:text-[10px]">
               3
             </Badge>
           </Button>
@@ -119,13 +168,13 @@ export function Header({ title, breadcrumbs }: HeaderProps) {
                 aria-haspopup="menu"
                 aria-expanded={isProfileMenuOpen}
               >
-                <Avatar className="w-8 h-8">
+                <Avatar className="h-8 w-8">
                   {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={user.displayName} /> : null}
                   <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-                <div className="hidden lg:flex flex-col items-start">
+                <div className="hidden xl:flex flex-col items-start">
                   <span className="font-medium text-sm leading-tight">{user.displayName}</span>
                   <span className="text-[11px] text-muted-foreground leading-tight">
                     {user.statusText || user.role}

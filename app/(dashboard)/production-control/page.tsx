@@ -177,12 +177,12 @@ export default function ProductionControlPage() {
         breadcrumbs={[{ label: 'Bradwear', href: '/dashboard' }, { label: 'Production Control' }]}
       />
 
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 p-3 md:space-y-6 md:p-6">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <p className="text-sm text-muted-foreground">
             Integrasi data dari aplikasi Bradflow (`orders`).
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant={isLive ? 'default' : 'secondary'}>
               {isLive ? `Live: ${data.source}` : 'Belum tersambung'}
             </Badge>
@@ -192,44 +192,44 @@ export default function ProductionControlPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-4">
           <Card>
-            <CardContent className="p-5">
+            <CardContent className="p-3 md:p-5">
               <p className="text-sm text-muted-foreground">Total Order Aktif</p>
-              <p className="text-2xl font-bold">{data.stats.totalOrder}</p>
+              <p className="text-xl font-bold md:text-2xl">{data.stats.totalOrder}</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-5">
+            <CardContent className="p-3 md:p-5">
               <p className="text-sm text-muted-foreground">Total Qty Produksi</p>
-              <p className="text-2xl font-bold">{data.stats.totalQty.toLocaleString('id-ID')}</p>
+              <p className="text-xl font-bold md:text-2xl">{data.stats.totalQty.toLocaleString('id-ID')}</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-5">
+            <CardContent className="p-3 md:p-5">
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Factory className="w-4 h-4" /> Dalam Proses
               </div>
-              <p className="text-2xl font-bold">{data.stats.inProgress}</p>
+              <p className="text-xl font-bold md:text-2xl">{data.stats.inProgress}</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-5">
+            <CardContent className="p-3 md:p-5">
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <TriangleAlert className="w-4 h-4" /> Lewat Deadline
               </div>
-              <p className="text-2xl font-bold text-red-600">{data.stats.overdue}</p>
+              <p className="text-xl font-bold text-red-600 md:text-2xl">{data.stats.overdue}</p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-6">
           <Card className="xl:col-span-2">
             <CardHeader>
               <CardTitle>Daftar Produksi</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-3 md:gap-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -270,56 +270,92 @@ export default function ProductionControlPage() {
                 </Select>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Kode</TableHead>
-                    <TableHead>Nama Penjahit</TableHead>
-                    <TableHead>Model</TableHead>
-                    <TableHead>Model Detail</TableHead>
-                    <TableHead>Jumlah Pesanan</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders.length === 0 ? (
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-6">
-                        Tidak ada data produksi yang cocok dengan filter.
-                      </TableCell>
+                      <TableHead>Kode</TableHead>
+                      <TableHead>Nama Penjahit</TableHead>
+                      <TableHead>Model</TableHead>
+                      <TableHead>Model Detail</TableHead>
+                      <TableHead>Jumlah Pesanan</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Aksi</TableHead>
                     </TableRow>
-                  ) : (
-                    filteredOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-mono text-xs">{order.id}</TableCell>
-                        <TableCell className="font-mono font-medium">{order.kode_barang || '-'}</TableCell>
-                        <TableCell>{order.nama_penjahit || '-'}</TableCell>
-                        <TableCell>{order.model || '-'}</TableCell>
-                        <TableCell>{order.model_detail || '-'}</TableCell>
-                        <TableCell>{(order.jumlah_pesanan || 0).toLocaleString('id-ID')}</TableCell>
-                        <TableCell>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOrders.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-6 text-center text-muted-foreground">
+                          Tidak ada data produksi yang cocok dengan filter.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-mono font-medium">{order.kode_barang || '-'}</TableCell>
+                          <TableCell>{order.nama_penjahit || '-'}</TableCell>
+                          <TableCell>{order.model || '-'}</TableCell>
+                          <TableCell>{order.model_detail || '-'}</TableCell>
+                          <TableCell>{(order.jumlah_pesanan || 0).toLocaleString('id-ID')}</TableCell>
+                          <TableCell>
+                            <Badge variant={getStatusBadgeVariant(order.normalized_status)}>
+                              {(order.status || order.normalized_status || '-').toString()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1"
+                              onClick={() => setSelectedOrder(order)}
+                            >
+                              <Eye className="w-4 h-4" />
+                              Detail
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="space-y-2 md:hidden">
+                {filteredOrders.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    Tidak ada data produksi yang cocok dengan filter.
+                  </p>
+                ) : (
+                  filteredOrders.map((order) => (
+                    <Card key={order.id}>
+                      <CardContent className="space-y-2 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-mono text-sm font-semibold">{order.kode_barang || '-'}</p>
                           <Badge variant={getStatusBadgeVariant(order.normalized_status)}>
                             {(order.status || order.normalized_status || '-').toString()}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1"
-                            onClick={() => setSelectedOrder(order)}
-                          >
-                            <Eye className="w-4 h-4" />
-                            Detail
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <p><span className="text-muted-foreground">Penjahit:</span> {order.nama_penjahit || '-'}</p>
+                          <p><span className="text-muted-foreground">Model:</span> {order.model || '-'}</p>
+                          <p><span className="text-muted-foreground">Detail:</span> {order.model_detail || '-'}</p>
+                          <p><span className="text-muted-foreground">Qty:</span> {(order.jumlah_pesanan || 0).toLocaleString('id-ID')}</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full gap-1"
+                          onClick={() => setSelectedOrder(order)}
+                        >
+                          <Eye className="w-4 h-4" />
+                          Detail
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
             </CardContent>
           </Card>
 

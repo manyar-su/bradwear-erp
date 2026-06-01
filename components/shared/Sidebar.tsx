@@ -4,81 +4,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard,
-  ClipboardList,
-  Users,
-  ShoppingCart,
-  Package,
-  TrendingUp,
-  Factory,
   ChevronLeft,
   ChevronRight,
-  Wallet,
-  Settings,
-  UserCircle2,
-  MessagesSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useAuth } from '@/components/providers/AuthProvider';
-
-const navItems = [
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'CS Dashboard',
-    href: '/cs-dashboard',
-    icon: ClipboardList,
-  },
-  {
-    title: 'Konsumen',
-    href: '/konsumen',
-    icon: Users,
-  },
-  {
-    title: 'Penjualan',
-    href: '/penjualan',
-    icon: ShoppingCart,
-  },
-  {
-    title: 'Production Control',
-    href: '/production-control',
-    icon: Factory,
-  },
-  {
-    title: 'Forum Diskusi',
-    href: '/forum-diskusi',
-    icon: MessagesSquare,
-  },
-  {
-    title: 'Belanja Bahan',
-    href: '/belanja-bahan',
-    icon: Package,
-  },
-  {
-    title: 'Affiliate Sales',
-    href: '/affiliate-sales',
-    icon: TrendingUp,
-  },
-  {
-    title: 'Keuangan',
-    href: '/keuangan',
-    icon: Wallet,
-  },
-  {
-    title: 'Pengaturan',
-    href: '/pengaturan',
-    icon: Settings,
-  },
-  {
-    title: 'Profil',
-    href: '/profil',
-    icon: UserCircle2,
-  },
-];
+import { navItems } from './nav-items';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -88,7 +20,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-[#1E3A5F] text-white transition-all duration-300 flex flex-col',
+        'fixed left-0 top-0 z-40 hidden h-screen bg-[#1E3A5F] text-white transition-all duration-300 md:flex md:flex-col',
         collapsed ? 'w-[70px]' : 'w-[260px]'
       )}
     >
