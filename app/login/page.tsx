@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,34 +10,45 @@ import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 
 type AuthMode = 'login' | 'register';
+type SignupRole = 'staff' | 'cs' | 'penjahit';
 
-const INTERNAL_DOMAIN = '@bradwear';
+const INTERNAL_DOMAIN = '@bradwear.com';
+const SHORT_INTERNAL_DOMAIN = '@bradwear';
+
+function normalizeInternalEmail(value: string) {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return '';
+  if (!trimmed.includes('@')) return `${trimmed}${INTERNAL_DOMAIN}`;
+  if (trimmed.endsWith(SHORT_INTERNAL_DOMAIN)) return `${trimmed}.com`;
+  return trimmed;
+}
 
 export default function LoginPage() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [nextPath, setNextPath] = useState('/dashboard');
+  const [signupRole, setSignupRole] = useState<SignupRole>('penjahit');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
+  const getNextPath = () => {
     const params = new URLSearchParams(window.location.search);
     const next = params.get('next');
     if (next && next.startsWith('/')) {
-      setNextPath(next);
+      return next;
     }
-  }, []);
+    return '/dashboard';
+  };
 
   const resetFeedback = () => {
     setError(null);
     setMessage(null);
   };
 
-  const validateRegistrationEmail = (value: string) => {
+  const validateInternalEmail = (value: string) => {
     return value.toLowerCase().endsWith(INTERNAL_DOMAIN);
   };
 
@@ -45,23 +56,24 @@ export default function LoginPage() {
     event.preventDefault();
     resetFeedback();
 
-    const trimmedEmail = email.trim().toLowerCase();
-    if (!trimmedEmail || !password) {
+    const normalizedEmail = normalizeInternalEmail(email);
+    if (!normalizedEmail || !password) {
       setError('Email dan password wajib diisi.');
       return;
     }
 
-    if (mode === 'register' && !validateRegistrationEmail(trimmedEmail)) {
-      setError(`Pendaftaran hanya boleh email internal (${INTERNAL_DOMAIN}).`);
+    if (!validateInternalEmail(normalizedEmail)) {
+      setError(`Gunakan email internal Bradwear (${INTERNAL_DOMAIN}).`);
       return;
     }
 
+    setEmail(normalizedEmail);
     setLoading(true);
     const supabase = createClient();
 
     if (mode === 'login') {
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: trimmedEmail,
+        email: normalizedEmail,
         password,
       });
 
@@ -71,18 +83,19 @@ export default function LoginPage() {
         return;
       }
 
-      router.replace(nextPath);
+      router.replace(getNextPath());
       router.refresh();
       return;
     }
 
     const { error: signUpError } = await supabase.auth.signUp({
-      email: trimmedEmail,
+      email: normalizedEmail,
       password,
       options: {
         data: {
-          display_name: displayName.trim() || trimmedEmail.split('@')[0],
-          full_name: displayName.trim() || trimmedEmail.split('@')[0],
+          display_name: displayName.trim() || normalizedEmail.split('@')[0],
+          full_name: displayName.trim() || normalizedEmail.split('@')[0],
+          role: signupRole,
         },
       },
     });
@@ -143,6 +156,21 @@ export default function LoginPage() {
                 />
               </div>
             )}
+            {mode === 'register' && (
+              <div className="space-y-2">
+                <Label htmlFor="signupRole">Role</Label>
+                <select
+                  id="signupRole"
+                  value={signupRole}
+                  onChange={(event) => setSignupRole(event.target.value as SignupRole)}
+                  className="h-8 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                >
+                  <option value="staff">Staff</option>
+                  <option value="cs">CS</option>
+                  <option value="penjahit">Penjahit</option>
+                </select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -150,7 +178,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder={mode === 'register' ? `nama${INTERNAL_DOMAIN}` : 'nama@bradwear'}
+                placeholder={`nama${INTERNAL_DOMAIN}`}
                 autoComplete="email"
               />
             </div>
@@ -168,7 +196,7 @@ export default function LoginPage() {
 
             {mode === 'register' && (
               <p className="text-xs text-muted-foreground">
-                Hanya email dengan suffix <span className="font-medium">{INTERNAL_DOMAIN}</span> yang dapat daftar.
+                Email akan disimpan ke Supabase Auth. Gunakan domain internal <span className="font-medium">{INTERNAL_DOMAIN}</span>.
               </p>
             )}
 

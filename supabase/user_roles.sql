@@ -91,3 +91,33 @@ using (
       and ur.role in ('admin', 'staff')
   )
 );
+
+create or replace function public.handle_new_auth_user_role()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.user_roles (user_id, role, display_name, is_active)
+  values (
+    new.id,
+    case
+      when lower(coalesce(new.raw_user_meta_data->>'role', '')) in ('staff', 'cs', 'penjahit')
+        then lower(new.raw_user_meta_data->>'role')
+      else 'penjahit'
+    end,
+    coalesce(new.raw_user_meta_data->>'display_name', new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+    true
+  )
+  on conflict (user_id) do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created_create_role on auth.users;
+create trigger on_auth_user_created_create_role
+after insert on auth.users
+for each row
+execute function public.handle_new_auth_user_role();
