@@ -108,6 +108,36 @@ function buildKonsumenFromOrders(orderRows: OrderAggregateRow[]) {
   return items;
 }
 
+async function getOrderAggregateRows(supabase: ReturnType<typeof getSupabaseAdmin>) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('konsumen_id, kode_barang, konsumen, jumlah_pesanan')
+    .is('deleted_at', null)
+    .limit(5000);
+
+  if (!error) {
+    return { rows: (data || []) as OrderAggregateRow[], error: null };
+  }
+
+  if (!error.message.includes('column orders.konsumen_id does not exist')) {
+    return { rows: [] as OrderAggregateRow[], error };
+  }
+
+  const { data: legacyData, error: legacyError } = await supabase
+    .from('orders')
+    .select('kode_barang, konsumen, jumlah_pesanan')
+    .is('deleted_at', null)
+    .limit(5000);
+
+  return {
+    rows: ((legacyData || []) as Array<Omit<OrderAggregateRow, 'konsumen_id'>>).map((row) => ({
+      ...row,
+      konsumen_id: null,
+    })),
+    error: legacyError,
+  };
+}
+
 export async function GET() {
   const user = await getCurrentUserContext();
   if (!user) {
@@ -116,21 +146,15 @@ export async function GET() {
 
   const supabase = getSupabaseAdmin();
 
-  const [{ data: konsumenRowsRaw, error: konsumenErr }, { data: orderRows, error: orderErr }] =
+  const [{ data: konsumenRowsRaw, error: konsumenErr }, { rows: aggregateRows, error: orderErr }] =
     await Promise.all([
       supabase
         .from('konsumen')
         .select('id, kode_barang, nama, telepon, email, alamat, catatan, status, created_by_email, pic_name, pic_phone, pic_email, assigned_cs, updated_by_email, created_at, updated_at')
         .order('updated_at', { ascending: false })
         .limit(1000),
-      supabase
-        .from('orders')
-        .select('konsumen_id, kode_barang, konsumen, jumlah_pesanan')
-        .is('deleted_at', null)
-        .limit(5000),
+      getOrderAggregateRows(supabase),
     ]);
-
-  const aggregateRows = (orderRows || []) as OrderAggregateRow[];
 
   let konsumenRows = konsumenRowsRaw;
   if (konsumenErr) {
