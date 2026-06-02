@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { can, DEFAULT_ROLE } from '@/lib/auth/permissions';
-import { EMAIL_COOKIE, SESSION_COOKIE, normalizeRole } from '@/lib/auth/session';
+import { EMAIL_COOKIE, NAME_COOKIE, ROLE_COOKIE, SESSION_COOKIE, normalizeRole } from '@/lib/auth/session';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import type { AppRole, AuthUserContext, PermissionKey } from '@/types/auth';
 
@@ -10,6 +10,9 @@ export const getCurrentUserContext = cache(async (): Promise<AuthUserContext | n
   const hasSession = cookieStore.get(SESSION_COOKIE)?.value === '1';
   const rawEmail = cookieStore.get(EMAIL_COOKIE)?.value || '';
   const email = decodeURIComponent(rawEmail || '').trim().toLowerCase();
+  const rawDisplayName = cookieStore.get(NAME_COOKIE)?.value || '';
+  const cookieDisplayName = decodeURIComponent(rawDisplayName || '').trim();
+  const cookieRole = normalizeRole(cookieStore.get(ROLE_COOKIE)?.value || DEFAULT_ROLE);
 
   if (!hasSession || !email) {
     return null;
@@ -35,8 +38,8 @@ export const getCurrentUserContext = cache(async (): Promise<AuthUserContext | n
       return {
         userId: email,
         email,
-        displayName: email.split('@')[0] || 'User',
-        role: DEFAULT_ROLE,
+        displayName: cookieDisplayName || email.split('@')[0] || 'User',
+        role: cookieRole,
         isActive: true,
       };
     }
@@ -54,8 +57,8 @@ export const getCurrentUserContext = cache(async (): Promise<AuthUserContext | n
     return {
       userId: email,
       email,
-      displayName: email.split('@')[0] || 'User',
-      role: DEFAULT_ROLE,
+      displayName: cookieDisplayName || email.split('@')[0] || 'User',
+      role: cookieRole,
       isActive: true,
     };
   }
