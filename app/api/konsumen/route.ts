@@ -37,9 +37,76 @@ type KonsumenRow = {
 
 type OrderAggregateRow = {
   konsumen_id: string | null;
+  kode_barang?: string | null;
   konsumen: string | null;
   jumlah_pesanan: number | null;
 };
+
+function isMissingKonsumenTable(message: string) {
+  return (
+    message.includes("Could not find the table 'public.konsumen'") ||
+    message.includes('relation "public.konsumen" does not exist')
+  );
+}
+
+function buildKonsumenFromOrders(orderRows: OrderAggregateRow[]) {
+  const orderByKonsumenName = new Map<
+    string,
+    {
+      kodeBarang: string;
+      nama: string;
+      totalOrder: number;
+      totalQty: number;
+    }
+  >();
+
+  orderRows.forEach((row) => {
+    const nama = (row.konsumen || '').trim();
+    if (!nama) return;
+
+    const key = nama.toLowerCase();
+    const prev = orderByKonsumenName.get(key) || {
+      kodeBarang: (row.kode_barang || '').trim(),
+      nama,
+      totalOrder: 0,
+      totalQty: 0,
+    };
+
+    if (!prev.kodeBarang && row.kode_barang) {
+      prev.kodeBarang = row.kode_barang;
+    }
+
+    prev.totalOrder += 1;
+    prev.totalQty += row.jumlah_pesanan || 0;
+    orderByKonsumenName.set(key, prev);
+  });
+
+  const now = new Date().toISOString();
+  const items = Array.from(orderByKonsumenName.entries())
+    .map(([key, row], index) => ({
+      id: `order-derived-${key.replace(/[^a-z0-9]+/g, '-') || index}`,
+      kode_barang: row.kodeBarang || '-',
+      nama: row.nama,
+      telepon: null,
+      email: null,
+      alamat: null,
+      catatan: 'Data otomatis dari tabel orders karena master konsumen belum tersedia.',
+      status: 'aktif' as const,
+      created_by_email: null,
+      pic_name: null,
+      pic_phone: null,
+      pic_email: null,
+      assigned_cs: null,
+      updated_by_email: null,
+      created_at: now,
+      updated_at: now,
+      total_order: row.totalOrder,
+      total_qty: row.totalQty,
+    }))
+    .sort((a, b) => b.total_order - a.total_order || a.nama.localeCompare(b.nama));
+
+  return items;
+}
 
 export async function GET() {
   const user = await getCurrentUserContext();
@@ -58,13 +125,25 @@ export async function GET() {
         .limit(1000),
       supabase
         .from('orders')
-        .select('konsumen_id, konsumen, jumlah_pesanan')
+        .select('konsumen_id, kode_barang, konsumen, jumlah_pesanan')
         .is('deleted_at', null)
         .limit(5000),
     ]);
 
+  const aggregateRows = (orderRows || []) as OrderAggregateRow[];
+
   let konsumenRows = konsumenRowsRaw;
   if (konsumenErr) {
+    if (orderErr) {
+      return NextResponse.json({ error: orderErr.message }, { status: 500 });
+    }
+    if (isMissingKonsumenTable(konsumenErr.message)) {
+      return NextResponse.json({
+        items: buildKonsumenFromOrders(aggregateRows),
+        source: 'orders-fallback',
+        warning: 'Tabel master konsumen belum tersedia. Data diturunkan dari orders.',
+      });
+    }
     if (!konsumenErr.message.includes('column konsumen.pic_name does not exist')) {
       return NextResponse.json({ error: konsumenErr.message }, { status: 500 });
     }
@@ -84,7 +163,7 @@ export async function GET() {
 
   const orderByKonsumenId = new Map<string, { totalOrder: number; totalQty: number }>();
   const orderByKonsumenName = new Map<string, { totalOrder: number; totalQty: number }>();
-  ((orderRows || []) as OrderAggregateRow[]).forEach((row) => {
+  aggregateRows.forEach((row) => {
     if (row.konsumen_id) {
       const prevById = orderByKonsumenId.get(row.konsumen_id) || { totalOrder: 0, totalQty: 0 };
       prevById.totalOrder += 1;
